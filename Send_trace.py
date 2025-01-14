@@ -82,7 +82,8 @@ def retreive_msm(msm):
         if(status == "No suitable probes" or status == "Failed" or status == "Archived"):
             break
         print("--Waiting for the Measurement : ", msm, " --")
-        time.sleep(120) #Sleeping for 2 minutes
+        time.sleep(180) #Sleeping for 3 minutes
+        status = Measurement(id=msm).status
     print("--Recieved Measurement--")
     
     
@@ -99,7 +100,7 @@ def retreive_msm(msm):
 def run_script(data,secure_key):
     #######Bounded Buffer start########
     #Setting up the buffer
-    CAPACITY = 2500
+    CAPACITY = 1000
     buffer = []
     
     probe_data = data[0]
@@ -160,7 +161,7 @@ def run_script(data,secure_key):
         #Open the sent file, if ip is in it then add it to buffer
         #then continue
 
-        msm = create_trace(probe_data,ip,key,items_produced%10)
+        msm = create_trace(probe_data,ip,key,items_produced%84)
         buffer.append([msm,ip,cidr])
         print("SENT MSM: ", msm)
 
@@ -216,6 +217,7 @@ secure_key =  '1002abbbeg-42f5aee4-e4d0-4570-a5cf-b31384860e44-Xyzngo'
 #key = '1HHbx12-1c3d00e0-cd3b-46eb-916a-33d0396750ec-JggFtv' #Add your RIPE Atlas API key here
 #key = '12c3gh-e190d841-2aa2-4477-b714-2c9e440385eb-kKlm9'
 
+#100
 #secure_key = '1HHbx12-1c3d00e0-cd3b-46eb-916a-33d0396750ec-JggFtv'
 #split_key = secure_key.split('-')
 #key = '-'.join(split_key[1:-1])
