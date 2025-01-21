@@ -159,9 +159,13 @@ def main(buffer_size, producer_file, consumer_file, inpt_file,secure_key):
       f_lines = [x for x in p_lines if x not in set(c_lines)]
 
       if len(f_lines) == 0:
-          print(f"Nothing to consume, Sleeping")
-          time.sleep(120) #Sleep for a longer time than producer
-          continue
+        if len(c_lines) == inpts:
+          print(f"Consumed all items")
+          break
+
+        print(f"Nothing to consume, Sleeping")
+        time.sleep(120) #Sleep for a longer time than producer
+        continue
       
       print('Passing through the produced items')
       for item in tqdm(f_lines):
