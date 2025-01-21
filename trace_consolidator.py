@@ -83,7 +83,7 @@ def read_traceroute(folder_names, dest_file):
                 ip_data[item['prb_id']] = prb_item
 
                 #Adding the file lines
-                data_lines.append(f'{ip}-{item["prb_id"]}-{last_hop_ip}-{cidr.replace("?","/").split(".")[0]}')
+                data_lines.append(f'{ip}-{item["prb_id"]}-{last_hop_ip}-{cidr.replace("?","/").split(".json")[0]}')
 
 
             
