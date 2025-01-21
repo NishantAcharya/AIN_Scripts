@@ -113,5 +113,8 @@ def main(buffer_size, producer_file, consumer_file, inpt_file):
           if consumed == inpts:
               break
           
+      #Sleep for a short time
+      #time.sleep(60)
+          
 main(1000, "producer.txt", "consumer.txt", "test_inpts.txt")
          
