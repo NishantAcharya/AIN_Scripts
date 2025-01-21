@@ -29,6 +29,7 @@ import socket
 import geoip2.database
 import requests
 import sys
+import ipaddress
 
 def read_n_lines_no_newlines(filename, n):
   """
@@ -99,45 +100,49 @@ def count_lines_in_file(filename):
   
 
 def create_trace(probe_ids,ip,key,st):
-    #grabbing all the probe_ids:
-    
-    probes = ""
-    for probe in probe_ids:
-        probes+= str(probe)+","
-    
-    probes = probes[:-1]
-    
-    current_name = ip+'-'+'AIN-PING'
 
-    ping = Ping(
-        af=4,
-        target=ip,
-        description=current_name
-    )
+  if ip == None or ip == 'None':
+    return '?1'
 
-    source = AtlasSource(
-        type="probes",
-        value=probes,
-        requested = len(probe_ids),
-        tags={"include":["system-ipv4-works"]}
-    )
-    atlas_request = AtlasCreateRequest(
-        start_time=datetime.now(timezone.utc)+timedelta(minutes=st),
-        stop_time=datetime.now(timezone.utc)+timedelta(minutes=st+10),
-        key=key,
-        measurements=[ping],
-        sources=[source],
-        is_oneoff=False
-    )
+  #grabbing all the probe_ids:
+  
+  probes = ""
+  for probe in probe_ids:
+      probes+= str(probe)+","
+  
+  probes = probes[:-1]
+  
+  current_name = ip+'-'+'AIN-PING'
 
-    (is_success, response) = atlas_request.create()
-    if not is_success:
-        raise Exception("Measurement Not Created, Please check reponse\n \t"+str(response))
+  ping = Ping(
+      af=4,
+      target=ip,
+      description=current_name
+  )
 
-    return response['measurements'][0]
+  source = AtlasSource(
+      type="probes",
+      value=probes,
+      requested = len(probe_ids),
+      tags={"include":["system-ipv4-works"]}
+  )
+  atlas_request = AtlasCreateRequest(
+      start_time=datetime.now(timezone.utc)+timedelta(minutes=st),
+      stop_time=datetime.now(timezone.utc)+timedelta(minutes=st+10),
+      key=key,
+      measurements=[ping],
+      sources=[source],
+      is_oneoff=False
+  )
+
+  (is_success, response) = atlas_request.create()
+  if not is_success:
+      raise Exception("Measurement Not Created, Please check reponse\n \t"+str(response))
+
+  return response['measurements'][0]
 
 
-def main(buffer_size, producer_file, consumer_file, inpt_file,secure_key):
+def main(buffer_size, producer_file, consumer_file, inpt_file,secure_key,prbs):
     print('Starting producer...')
   
     consumed = 0
@@ -187,17 +192,17 @@ def main(buffer_size, producer_file, consumer_file, inpt_file,secure_key):
         adpative_counter = 5
         for i in range(len(ips)):
             ip = ips[i]
-            probe = probes[i]
+            probe = prbs
             line = lines[i]
-            msm = create_trace([probe],ip,key,adpative_counter%84)
-
+            msm = create_trace(probe,ip,key,adpative_counter%84)
 
             new_line = line + '-' + str(msm) + '\n'
             adpative_counter+=1
 
             with open(producer_file, 'a') as file:
-                file.write(new_line)
-
+              file.write(new_line)
+    #Clearing producer file
+    os.remove(producer_file)
         
 
 #My Key
@@ -206,4 +211,5 @@ def main(buffer_size, producer_file, consumer_file, inpt_file,secure_key):
 #Alex's Key
 secure_key =  '1002abbbeg-42f5aee4-e4d0-4570-a5cf-b31384860e44-Xyzngo'
 
-main(1000,'producer.txt','consumer.txt','ping_inpt.txt',secure_key)
+probes = [21003,55451,1009747,10342,1145,52574,53097,55692,1008382,30350]
+main(1000,'producer.txt','consumer.txt','ping_inpt.txt',secure_key,probes)

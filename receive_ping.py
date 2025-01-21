@@ -102,10 +102,11 @@ def retreive_msm(msm):
 def save_to_file(key_ip,msm,ip,cidr,probe,data):
    #Saving the trace                 
     today = date.today()
-    date_t = today.strftime("%b-%d-%Y")
+    date_t = today.strftime("%Y-%m-%d")
+    current_time = datetime.now().strftime("%H-%M-%S")
 
     #Make sure there is a JSON folder in the same place as this script
-    dirname = "JSON/"+date_t+"/"
+    dirname = "JSON/"+date_t+'.'+current_time+"/"
 
     os.makedirs(os.path.dirname(dirname), exist_ok=True)
     filename = dirname+ str(key_ip)+ '-'+str(probe)+'-'+str(ip)+'-'+str(cidr).replace('/','?')+'-'+str(msm)+".json"
@@ -170,6 +171,12 @@ def main(buffer_size, producer_file, consumer_file, inpt_file,secure_key):
             probe = values[1]
             ip = values[2]
             cidr = values[3]
+            if msm == '?1':
+              print(f'No suitable hop to hit: {ip}')
+              save_to_file(key_ip,msm,ip,cidr,probe,{'Failed':True})
+              with open(consumer_file, 'a') as file:
+                    file.write(item + '\n')
+              consumed += 1
 
             status = check_status(msm)
             if status == "Stopped" or status == "No suitable probes" or status == "Failed" or status == "Archived":
@@ -179,12 +186,20 @@ def main(buffer_size, producer_file, consumer_file, inpt_file,secure_key):
                 with open(consumer_file, 'a') as file:
                     file.write(item + '\n')
                 consumed += 1
+            elif status == "No suitable probes" or status == "Failed" or status == "Archived":
+                print(f'Measurement Failed: {ip}')
+                save_to_file(key_ip,msm,ip,cidr,probe,{'Failed':True})
+                with open(consumer_file, 'a') as file:
+                    file.write(item + '\n')
+                consumed += 1
 
           
       #Sleep for a short time
       print('Pass Ended, Sleeping before next pass')
       time.sleep(90)
-          
+  
+  #Remove consumer file
+  os.remove(consumer_file)
 #My Key
 #secure_key = '1HHbx12-1c3d00e0-cd3b-46eb-916a-33d0396750ec-JggFtv'
 

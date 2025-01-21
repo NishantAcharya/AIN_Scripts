@@ -5,6 +5,7 @@
 import os
 import json
 from tqdm import tqdm
+import ipaddress
 
 def get_all_files_in_folder(folder_path):
   """
@@ -67,11 +68,16 @@ def read_traceroute(folder_names, dest_file):
                 prb_item = {'Traceroute':[], 'Last_Hop_IP':None, 'Dest_Replied':False}
                 prb_item['Dest_Replied'] = item['destination_ip_responded']
                 traceroute_full = item['result']
-                last_hop_ip = None
+                last_hop_ip = item['src_addr'] #Start with the source address
+
+                if ipaddress.ip_address(last_hop_ip).is_private:
+                    last_hop_ip = None
+
                 for hop in traceroute_full:
                     try:
                         hop_ip = hop['result'][0]['from'] #Single ping traceroute, for more scan the full list
-                        last_hop_ip = hop_ip
+                        if not ipaddress.ip_address(hop_ip).is_private:
+                            last_hop_ip = hop_ip
                     except KeyError:
                         hop_ip = '*'
                         
