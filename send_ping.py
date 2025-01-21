@@ -201,8 +201,6 @@ def main(buffer_size, producer_file, consumer_file, inpt_file,secure_key,prbs):
 
             with open(producer_file, 'a') as file:
               file.write(new_line)
-    #Clearing producer file
-    os.remove(producer_file)
         
 
 #My Key

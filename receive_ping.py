@@ -197,9 +197,7 @@ def main(buffer_size, producer_file, consumer_file, inpt_file,secure_key):
       #Sleep for a short time
       print('Pass Ended, Sleeping before next pass')
       time.sleep(90)
-  
-  #Remove consumer file
-  os.remove(consumer_file)
+
 #My Key
 #secure_key = '1HHbx12-1c3d00e0-cd3b-46eb-916a-33d0396750ec-JggFtv'
 
