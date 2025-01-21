@@ -106,10 +106,10 @@ def save_to_file(key_ip,msm,ip,cidr,probe,data):
     current_time = datetime.now().strftime("%H-%M-%S")
 
     #Make sure there is a JSON folder in the same place as this script
-    dirname = "JSON/"+date_t+'.'+current_time+"/"
+    dirname = "JSON/"+date_t+"/"
 
     os.makedirs(os.path.dirname(dirname), exist_ok=True)
-    filename = dirname+ str(key_ip)+ '-'+str(probe)+'-'+str(ip)+'-'+str(cidr).replace('/','?')+'-'+str(msm)+".json"
+    filename = dirname+current_time+'-'+str(key_ip)+ '-'+str(probe)+'-'+str(ip)+'-'+str(cidr).replace('/','?')+'-'+str(msm)+".json"
     with open(filename, "w+") as outfile: 
         json.dump(data, outfile)
 
