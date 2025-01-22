@@ -184,7 +184,6 @@ def main(buffer_size, producer_file, consumer_file, inpt_file,secure_key):
 
             status = check_status(msm)
             if status == "Stopped" or status == "No suitable probes" or status == "Failed" or status == "Archived":
-                print("Downloading the results")
                 results = retreive_msm(msm)
                 save_to_file(key_ip,msm,ip,cidr,probe,results)
                 with open(consumer_file, 'a') as file:
@@ -208,4 +207,4 @@ def main(buffer_size, producer_file, consumer_file, inpt_file,secure_key):
 #Alex's Key
 secure_key =  '1002abbbeg-42f5aee4-e4d0-4570-a5cf-b31384860e44-Xyzngo'
 
-main(1000,'producer.txt','consumer.txt','ping_inpt.txt',secure_key)
+main(2500,'producer.txt','consumer.txt','ping_inpt.txt',secure_key)
