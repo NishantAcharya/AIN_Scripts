@@ -141,16 +141,11 @@ def main(folder_path):
 
     #Getting 10 random IP values to test the difference between hardware and software probes
     random_ips = random.sample(total_unique_ips,10)
-    #print(f"Random IPs: {random_ips}")
+    print(f"Random IPs: {random_ips}")
 
     #Plot min_rtt data as a cdf with each probe as a different line
 
     #cdf(min_rtt_data,1000)
-
-    #Save the unique IPs
-    with open('unique_ips.txt','w') as f:
-        for ip in total_unique_ips:
-            f.write(ip+'\n')
         
 
 main('/home/nishant-acharya/Desktop/AIN_Scripts/AIN_Scripts/JSON/2025-01-21')
