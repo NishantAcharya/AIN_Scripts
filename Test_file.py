@@ -52,5 +52,6 @@ def retreive_msm(msm):
 
     print(Measurement(id=msm).status)
     print(Measurement(id=msm).start_time)
+    print(results)
 
-retreive_msm(85957451)
+retreive_msm(86623325)

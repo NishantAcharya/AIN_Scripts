@@ -228,7 +228,7 @@ def main(buffer_size, producer_file, consumer_file, inpt_file,secure_key):
 #Alex's Key
 secure_key =  '1002abbbeg-42f5aee4-e4d0-4570-a5cf-b31384860e44-Xyzngo'
 
-main(2500,'producer.txt','consumer.txt','responsive_ips.txt',secure_key)
+main(1000,'producer.txt','consumer.txt','responsive_ips.txt',secure_key)
 #Clear producer and consumer files
 open('producer.txt', 'w').close()
 open('consumer.txt', 'w').close()
