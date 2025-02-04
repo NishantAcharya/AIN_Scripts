@@ -113,6 +113,20 @@ def save_to_file(key_ip,msm,ip,cidr,probe,data):
     with open(filename, "w+") as outfile: 
         json.dump(data, outfile)
 
+def save_to_file_ping(data):
+    #Saving the trace                 
+      today = date.today()
+      date_t = today.strftime("%Y-%m-%d")
+      current_time = datetime.now().strftime("%H-%M-%S")
+  
+      #Make sure there is a JSON folder in the same place as this script
+      dirname = "JSON/"
+  
+      os.makedirs(os.path.dirname(dirname), exist_ok=True)
+      filename = dirname+date_t+current_time+"pings"+".json"
+      with open(filename, "w+") as outfile: 
+          json.dump(data, outfile)
+
 
 
 def main(buffer_size, producer_file, consumer_file, inpt_file,secure_key):
@@ -126,6 +140,7 @@ def main(buffer_size, producer_file, consumer_file, inpt_file,secure_key):
 
   consumed = 0
   exists_producer = False
+  consumed_data = {}
 
   #Checking if the main IP file exists
   if not os.path.exists(inpt_file):
@@ -171,13 +186,15 @@ def main(buffer_size, producer_file, consumer_file, inpt_file,secure_key):
       for item in tqdm(f_lines):
             values = item.split('-')
             msm = values[-1]
-            key_ip = values[0]
-            probe = values[1]
-            ip = values[2]
-            cidr = values[3]
+            ip = values[0]
+            #key_ip = values[0]
+            #probe = values[1]
+            #ip = values[2]
+            #cidr = values[3]
             if msm == '?1':
               print(f'No suitable hop to hit: {ip}')
-              save_to_file(key_ip,msm,ip,cidr,probe,{'Failed':True})
+              #save_to_file(key_ip,msm,ip,cidr,probe,{'Failed':True})
+              consumed_data[ip] = {'Failed':True}
               with open(consumer_file, 'a') as file:
                     file.write(item + '\n')
               consumed += 1
@@ -185,13 +202,15 @@ def main(buffer_size, producer_file, consumer_file, inpt_file,secure_key):
             status = check_status(msm)
             if status == "Stopped" or status == "No suitable probes" or status == "Failed" or status == "Archived":
                 results = retreive_msm(msm)
-                save_to_file(key_ip,msm,ip,cidr,probe,results)
+                #save_to_file(key_ip,msm,ip,cidr,probe,results)
+                consumed_data[ip] = results
                 with open(consumer_file, 'a') as file:
                     file.write(item + '\n')
                 consumed += 1
             elif status == "No suitable probes" or status == "Failed" or status == "Archived":
                 print(f'Measurement Failed: {ip}')
-                save_to_file(key_ip,msm,ip,cidr,probe,{'Failed':True})
+                #save_to_file(key_ip,msm,ip,cidr,probe,{'Failed':True})
+                consumed_data[ip] = {'Failed':True}
                 with open(consumer_file, 'a') as file:
                     file.write(item + '\n')
                 consumed += 1
@@ -201,10 +220,15 @@ def main(buffer_size, producer_file, consumer_file, inpt_file,secure_key):
       print('Pass Ended, Sleeping before next pass')
       time.sleep(90)
 
+  #Saving the data
+  save_to_file_ping(consumed_data)
 #My Key
 #secure_key = '1HHbx12-1c3d00e0-cd3b-46eb-916a-33d0396750ec-JggFtv'
 
 #Alex's Key
 secure_key =  '1002abbbeg-42f5aee4-e4d0-4570-a5cf-b31384860e44-Xyzngo'
 
-main(2500,'producer.txt','consumer.txt','ping_inpt.txt',secure_key)
+main(2500,'producer.txt','consumer.txt','responsive_ips.txt',secure_key)
+#Clear producer and consumer files
+open('producer.txt', 'w').close()
+open('consumer.txt', 'w').close()

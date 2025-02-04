@@ -184,8 +184,7 @@ def main(buffer_size, producer_file, consumer_file, inpt_file,secure_key,prbs):
         print('Producing...')
         lines = read_n_lines_from_line(inpt_file, current_line, to_read)
         current_line += to_read
-        ips = [line.split('-')[2].strip() for line in lines]
-        probes = [line.split('-')[1].strip() for line in lines]
+        ips = [line.strip() for line in lines]
         split_key = secure_key.split('-')
         key = '-'.join(split_key[1:-1])
 
@@ -194,14 +193,13 @@ def main(buffer_size, producer_file, consumer_file, inpt_file,secure_key,prbs):
             ip = ips[i]
             probe = prbs
             line = lines[i]
-            msm = create_trace(probe,ip,key,adpative_counter%84)
+            msm = create_trace(probe,ip,key,adpative_counter%10) #50 pings per minute
 
             new_line = line + '-' + str(msm) + '\n'
             adpative_counter+=1
 
             with open(producer_file, 'a') as file:
-              file.write(new_line)
-        
+              file.write(new_line)     
 
 #My Key
 #secure_key = '1HHbx12-1c3d00e0-cd3b-46eb-916a-33d0396750ec-JggFtv'
@@ -210,4 +208,4 @@ def main(buffer_size, producer_file, consumer_file, inpt_file,secure_key,prbs):
 secure_key =  '1002abbbeg-42f5aee4-e4d0-4570-a5cf-b31384860e44-Xyzngo'
 
 probes = [21003,55451,1009747,10342,1145,52574,53097,55692,1008382,30350]
-main(2500,'producer.txt','consumer.txt','ping_inpt.txt',secure_key,probes)
+main(2500,'producer.txt','consumer.txt','responsive_ips.txt',secure_key,probes)
