@@ -1,1 +1,0 @@
-#This script find a vantage point from RIPE Atlas's probe list closest to the target IP

@@ -198,7 +198,18 @@ def run_script(data,secure_key):
         #Clear the sent file
 
 #Probes, before running dobule check if these probes are active     
-probes = [55451,21003,1009711]
+#probes = [55451,21003,1009711]
+#Loading probes
+probes = []
+data = []
+with open('JSON/grouped_probes.json') as f:
+    data = json.load(f)
+
+for key in data.keys():
+    group = data[key]
+    for dist in group.keys():
+        probes.append(data[key][dist])
+
 #Get the IPs from the CSV file
 
 ips = []

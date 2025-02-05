@@ -52,6 +52,64 @@ def retreive_msm(msm):
 
     print(Measurement(id=msm).status)
     print(Measurement(id=msm).start_time)
+    print(Measurement(id=msm).stop_time)
     print(results)
 
-retreive_msm(86623325)
+#retreive_msm(86678278)
+
+def create_trace(probe_ids,ip,key,st):
+
+  if ip == None or ip == 'None':
+    return '?1'
+
+  #grabbing all the probe_ids:
+  
+  probes = ""
+  for probe in probe_ids:
+      probes+= str(probe)+","
+  
+  probes = probes[:-1]
+  
+  current_name = ip+'-'+'AIN-PING'
+
+  ping = Ping(
+      af=4,
+      target=ip,
+      description=current_name
+  )
+
+  source = AtlasSource(
+      type="probes",
+      value=probes,
+      requested = len(probe_ids),
+      tags={"include":["system-ipv4-works"]}
+  )
+  atlas_request = AtlasCreateRequest(
+      start_time=datetime.now(timezone.utc)+timedelta(minutes=st+1),
+      stop_time=datetime.now(timezone.utc)+timedelta(minutes=st+11),
+      key=key,
+      measurements=[ping],
+      sources=[source],
+      is_oneoff=False
+  )
+
+  (is_success, response) = atlas_request.create()
+  if not is_success:
+      raise Exception("Measurement Not Created, Please check reponse\n \t"+str(response))
+
+  return response['measurements'][0]
+
+
+probes = []
+data = []
+with open('JSON/grouped_probes.json') as f:
+    data = json.load(f)
+
+for key in data.keys():
+    group = data[key]
+    for dist in group.keys():
+        probes.append(data[key][dist])
+
+print(probes)
+msm = create_trace(probes,'174.61.188.144','',3)
+print(msm)
