@@ -230,5 +230,5 @@ secure_key =  '1002abbbeg-42f5aee4-e4d0-4570-a5cf-b31384860e44-Xyzngo'
 
 main(1000,'producer.txt','consumer.txt','responsive_ips.txt',secure_key)
 #Clear producer and consumer files
-open('producer.txt', 'w').close()
-open('consumer.txt', 'w').close()
+#open('producer.txt', 'w').close()
+#open('consumer.txt', 'w').close()
