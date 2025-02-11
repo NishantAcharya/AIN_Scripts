@@ -1,6 +1,21 @@
 import numpy as np
 import pandas as pd
 import json
+import ipaddress
+
+
+#To break down a CIDR into smaller subnets with the specified mask such as 28
+def break_cidr(cidr, target_mask):
+    network = ipaddress.ip_network(cidr)
+
+    if network.prefixlen >= target_mask:
+        return [network]  # No need to break down further
+
+    subnets = []
+    for subnet in network.subnets(new_prefix=target_mask):
+        subnets.append(subnet)
+
+    return subnets
 
 #Read the JSON File and remove the residential IPs, then coagulate under CIDRs and select 1 IP per CIDR
 with open('rdns_info.json', 'r') as f:
@@ -17,15 +32,28 @@ for i in range(len(rdns)):
             if len(ips[i]) == 0:
                 ips.remove(ips[i])
                 cidrs.remove(cidrs[i])
-            
-filtered_ips = []
-filtered_cidrs = []
+        
 
 #Filter the cidrs and IPs into a mask (for now /26)
 masked_ips = []
 masked_cidrs = []
 
+mask = 26
+for cidr in cidrs:
+    subnets = break_cidr(cidr, mask)
+    for subnet in subnets:
+        masked_cidrs.append(str(subnet))
 
+for i in range(len(ips)):
+    seperated_cidr_ips = []
+    for ip in ips[i]:
+        if ipaddress.ip_address(ip) in ipaddress.ip_network(masked_cidrs[i]):
+            seperated_cidr_ips.append(ip)
+    masked_ips.append(seperated_cidr_ips)
+
+
+filtered_ips = []
+filtered_cidrs = []
 
 for i in range(len(ips)):
     if len(ips[i]) > 0:
