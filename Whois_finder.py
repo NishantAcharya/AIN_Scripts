@@ -12,11 +12,11 @@ import math
 import socket,struct
 import random
 import geopy.distance
-from googlesearch import search
+#from googlesearch import search
 import re
 import matplotlib.pyplot as plt
-import docx
-import whois
+#import docx
+#import whois
 import subprocess
 from ast import literal_eval
 

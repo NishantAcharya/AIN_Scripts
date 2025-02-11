@@ -101,26 +101,26 @@ maxmind_25 = [str(i) for i in maxmind_25]
 ipinfo_25 = [str(i) for i in ipinfo_25]
 
 
-mask = 26
-print(f'Get /{mask} CIDRs\n')
+#mask = 26
+#print(f'Get /{mask} CIDRs\n')
 #Getting maxmind updated cidrs
-maxmind_25_masked = []
-for cidr in tqdm(maxmind_25):
-    maxmind_25_masked.extend(break_cidr(cidr,mask))
+#maxmind_25_masked = []
+#for cidr in tqdm(maxmind_25):
+#    maxmind_25_masked.extend(break_cidr(cidr,mask))
 
 #Getting ipinfo updated cidrs
-ipinfo_25_masked = []
-for cidr in tqdm(ipinfo_25):
-    ipinfo_25_masked.extend(break_cidr(cidr,mask))
+#ipinfo_25_masked = []
+#for cidr in tqdm(ipinfo_25):
+#    ipinfo_25_masked.extend(break_cidr(cidr,mask))
     
-print('Maxmind 25 KM CIDRs:',len(maxmind_25_masked))
-print('IPinfo 25 KM CIDRs:',len(ipinfo_25_masked))
+#print('Maxmind 25 KM CIDRs:',len(maxmind_25_masked))
+#print('IPinfo 25 KM CIDRs:',len(ipinfo_25_masked))
 
 #Getting union of them both
-maxmind_25_masked = list(set(maxmind_25_masked))
-ipinfo_25_masked = list(set(ipinfo_25_masked))
+#maxmind_25_masked = list(set(maxmind_25_masked))
+#ipinfo_25_masked = list(set(ipinfo_25_masked))
 
-union_set = list(set(maxmind_25_masked + ipinfo_25_masked))
+union_set = list(set(maxmind_25 + ipinfo_25))
 
 print('Union of CIDRs:',len(union_set))
 print('Converting Back to Strings\n')
