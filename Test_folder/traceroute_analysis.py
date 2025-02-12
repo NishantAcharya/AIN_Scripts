@@ -7,6 +7,8 @@ from tqdm import tqdm
 import ipaddress
 
 def get_asn(ip):
+    if ip == None:
+        return None,None
     obj = IPWhois(ip)
     res = obj.lookup_whois()
     return res['asn'],res['asn_cidr']
@@ -71,7 +73,7 @@ for key in tqdm(data):
             temp = last_hop_ASNs[asn]
         except KeyError:
             last_hop_ASNs[asn] = []
-        
+       
         last_hop_ASNs[asn].append(last_hop_ip)
 
         try:
@@ -112,7 +114,7 @@ print('-----------------------------------------------------------------\n')
 most_common_hop = None
 common_hops = []
 for hop in hop_to_ip.keys():
-    if ipaddress.ip_address(hop).is_private == False:
+    if ipaddress.ip_address(hop).is_private == True:
         continue
     if most_common_hop is None:
         most_common_hop = hop
@@ -180,7 +182,7 @@ top_5_last_hops_length = []
 equal_last_hops = {}
 top_5_last_hop_ASNs = []
 for key in unique_ends_with_starts:
-    if ipaddress.ip_address(key).is_private == False:
+    if key == None or ipaddress.ip_address(key).is_private == True:
         continue
     if len(top_5_last_hops) < 5:
         top_5_last_hops.append(key)
@@ -198,6 +200,8 @@ for key in unique_ends_with_starts:
             equal_last_hops[top_5_last_hops[min_index]].append(key)
 
 for hop in top_5_last_hops:
+    if hop == None:
+        continue
     if ipaddress.ip_address(hop).is_private:
         asn = 'Private'
     else:
@@ -222,11 +226,12 @@ print('-----------------------------------------------------------------\n')
 #Getting the AS and CIDR of top 5 most common hops along with how many associated with it
 top_5_common_hops = []
 equal_common_hops = {}
-top_5_common_hops_length = [-1]
+top_5_common_hops_length = []
 top_5_common_hops_ASNs = []
 
 for key in hop_to_ip:
-    if ipaddress.ip_address(key).is_private == False:
+    
+    if key == None or ipaddress.ip_address(key).is_private == True:
         continue
 
     if len(top_5_common_hops) < 5:
@@ -245,7 +250,7 @@ for key in hop_to_ip:
             equal_common_hops[top_5_common_hops[min_index]].append(key)
 
 for hop in top_5_common_hops:
-    if ipaddress.ip_address(key).is_private == False:
+    if key == None or ipaddress.ip_address(key).is_private == True:
         asn = 'Private'
     else:
         asn,_ = get_asn(hop)
