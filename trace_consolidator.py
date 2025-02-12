@@ -65,7 +65,7 @@ def read_traceroute(folder_names, dest_file):
 
             #Getting the traceroutes and last_hop_ip per prb
             for item in temp[ip]:
-                prb_item = {'Traceroute':[], 'Last_Hop_IP':None, 'Dest_Replied':False}
+                prb_item = {'Traceroute':[], 'Last_Hop_IP':None, 'Dest_Replied':False, 'RTTs':[]}
                 prb_item['Dest_Replied'] = item['destination_ip_responded']
                 traceroute_full = item['result']
                 last_hop_ip = item['src_addr'] #Start with the source address
@@ -80,9 +80,15 @@ def read_traceroute(folder_names, dest_file):
                             last_hop_ip = hop_ip
                     except KeyError:
                         hop_ip = '*'
+
+                    try:
+                        rtt = hop['result'][0]['rtt']
+                    except KeyError:
+                        rtt = '*'
                         
 
                     prb_item['Traceroute'].append(hop_ip)
+                    prb_item['RTTs'].append(rtt)
                 
                 prb_item['Last_Hop_IP'] = last_hop_ip
             
