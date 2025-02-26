@@ -103,6 +103,12 @@ print(f"Far Group: {far_group}")
 print(f"Mid Group: {mid_group}")
 data = {'Close':close_group,'Far':far_group,'Mid':mid_group}
 
+#Use this to create a trace vantage selector from an area close to the library and the nearest metropolitan area
+#That is not the current metro(if current is a metropolitan area)
+#Use the CDC data, and find the median population desnity in each city per state, keep a record of all the 
+## cities over the median range of pop density -- get their geolocation
+#Find a probe close to each of these metropolitan areas and 5 closest probes near the city -- make sure no repeat happens
+
 #Saving the data
 with open('JSON/grouped_probes.json', 'w') as f:
     json.dump(data, f, indent=4)

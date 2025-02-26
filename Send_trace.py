@@ -72,6 +72,39 @@ def create_trace(probe_ids,ip,key,st):
 
     return response['measurements'][0]
 
+def create_trace_test(probe_ids,ip,key,st,et):
+    #grabbing all the probe_ids:
+    
+    probes = ""
+    for probe in probe_ids:
+        probes+= str(probe)+","
+    
+    probes = probes[:-1]
+    
+    current_name = ip+'-'+'AIN'
+
+    trace = Traceroute(af=4, target=ip, description=current_name,packets=1,protocol="ICMP")
+    source = AtlasSource(
+        type="probes",
+        value=probes,
+        requested = len(probe_ids),
+        tags={"include":["system-ipv4-works"]}
+    )
+    atlas_request = AtlasCreateRequest(
+        start_time=st,
+        stop_time=et,
+        key=key,
+        measurements=[trace],
+        sources=[source],
+        is_oneoff=False
+    )
+
+    (is_success, response) = atlas_request.create()
+    if not is_success:
+        raise Exception("Measurement Not Created, Please check reponse\n \t"+str(response))
+
+    return response['measurements'][0]
+
 def retreive_msm(msm):
     kwargs = {
         "msm_id": msm
@@ -100,8 +133,14 @@ def retreive_msm(msm):
 def run_script(data,secure_key):
     #######Bounded Buffer start########
     #Setting up the buffer
-    CAPACITY = 1000
+    CAPACITY = 2000
     buffer = []
+    #Testing for 30 minutes of a runtime to check how many failed
+    start_time = datetime.now(timezone.utc)+timedelta(minutes=45)
+    end_time = datetime.now(timezone.utc)+timedelta(minutes=75)
+
+    split_key = secure_key.split('-')
+    key = '-'.join(split_key[1:-1])
     
     probe_data = data[0]
     ip_data = data[1]
@@ -125,8 +164,6 @@ def run_script(data,secure_key):
                 items_produced += 1
                 continue
         
-        split_key = secure_key.split('-')
-        key = '-'.join(split_key[1:-1])
         
         file_path="ip_list.txt"
         #if buffer is full wait
@@ -161,7 +198,8 @@ def run_script(data,secure_key):
         #Open the sent file, if ip is in it then add it to buffer
         #then continue
 
-        msm = create_trace(probe_data,ip,key,items_produced%84)
+        #msm = create_trace(probe_data,ip,key,items_produced%84)
+        msm = create_trace_test(probe_data,ip,key,start_time,end_time)
         buffer.append([msm,ip,cidr])
         print("SENT MSM: ", msm)
 
@@ -242,7 +280,7 @@ secure_key =  '1002abbbeg-42f5aee4-e4d0-4570-a5cf-b31384860e44-Xyzngo'
 #split_key = secure_key.split('-')
 #key = '-'.join(split_key[1:-1])
 
-script_data = [probes,ips,cidrs]
+script_data = [probes,ips[:2500],cidrs[:2500]]
 start_time = time.time()
 run_script(script_data,secure_key)
 end_time = time.time()

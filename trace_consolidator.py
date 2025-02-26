@@ -104,11 +104,11 @@ def read_traceroute(folder_names, dest_file):
     return data
 
 def main():
-    folder_names = ['JSON/Jan-08-2025']
+    folder_names = ['JSON/Feb-25-2025']
     dest_file = 'ping_inpt.txt'
     data = read_traceroute(folder_names, dest_file)
     #In Future need a way to keep track of the library name
-    with open('Trace_data/Burlington.json', 'w') as f:
+    with open('Trace_data/Burlington-Test.json', 'w') as f:
         json.dump(data, f, indent=4)
 
 

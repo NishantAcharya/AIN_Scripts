@@ -3,6 +3,39 @@ import pandas as pd
 import json
 import ipaddress
 from tqdm import tqdm
+import time
+from bs4 import BeautifulSoup
+import requests
+import gzip
+import shutil
+import sys
+
+#Helper
+def get_all_links(url):
+    try:
+        response = requests.get(url)
+        response.raise_for_status()  # Raise HTTPError for bad responses (4xx or 5xx)
+        soup = BeautifulSoup(response.content, 'html.parser')
+        links = [a['href'] for a in soup.find_all('a', href=True)]
+        return links
+    except requests.exceptions.RequestException as e:
+         print(f"Error fetching URL: {e}")
+         return []
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        return []
+    
+def download_file(url,local_filename):
+    # NOTE the stream=True parameter below
+    with requests.get(url, stream=True) as r:
+        r.raise_for_status()
+        with open(local_filename, 'wb') as f:
+            for chunk in r.iter_content(chunk_size=8192): 
+                # If you have chunk encoded response uncomment if
+                # and set chunk_size parameter to None.
+                #if chunk: 
+                f.write(chunk)
+
 
 
 #To break down a CIDR into smaller subnets with the specified mask such as 28
@@ -41,6 +74,69 @@ for i in range(len(ips)):
 with open('JSON/filtered_rdns_info.json', 'w') as f:
     json.dump(cidr_data, f, indent=4)
 
+#Get AS information from prefix 2 AS and AS rank here using the cidr_data keys
+# year = time.strftime("%Y")
+# month = time.strftime("%m")
+# day = time.strftime("%d")
+# day = str(int(day)-2)
+# if len(day) == 1:
+#     day = '0' + day
+# match_string = year + month + day
+# links = get_all_links('https://publicdata.caida.org/datasets/routing/routeviews-prefix2as/'+ year + '/'+month+'/')
+# pf2asgz = 'Probe_files/pf2as.gz'
+# try:
+#     output = [link for link in links if match_string in link][-1]
+# except:
+#     new_month = str(int(month)-1)
+#     if len(new_month) == 1:
+#         new_month = '0' + new_month
+#     
+#     day = '28'
+#     match_string = year + new_month + day
+#     output = [link for link in links if match_string in link][-1]
+# 
+# download_file('https://publicdata.caida.org/datasets/routing/routeviews-prefix2as/'+ year + '/'+month+'/'+output,pf2asgz)
+# pf2as = 'Probe_files/pf2as.pfx2as'
+# with gzip.open(pf2asgz, 'rb') as f_in:
+#     with open(pf2as, 'wb') as f_out:
+#         shutil.copyfileobj(f_in, f_out)
+# 
+# as_map_mid = {}
+# Removing duplicates and going for the least specific AS
+# with open(pf2as, 'r') as f:
+#     lines = f.readlines()
+#     for line in lines:
+#         parts = line.strip().split('\t')
+#         as_map_mid[parts[0]] = [parts[1],parts[2]]
+# 
+# as_map = {}
+# for key in as_map_mid.keys():
+#     new_key = key + '/' +as_map_mid[key][0]
+#     as_map[new_key] = as_map_mid[key][1]
+# 
+# all_ases = {}
+# cidr_keys = list(cidr_data.keys())
+# as_map_keys = list(as_map.keys())
+# This piece of code will collect all the ASes that are in the
+# print('Generating AS List')
+# for cidr in tqdm(as_map_keys):
+#     network = ipaddress.ip_network(cidr)
+#     
+#     for key in cidr_keys:
+#         key_net = ipaddress.ip_network(key)
+#         if network.overlaps(key_net):
+#             try:
+#                 check = all_ases[cidr]
+#             except KeyError:
+#                 all_ases[cidr] = set()
+#             all_ases[cidr].add(as_map[key])
+#             break #Already found this AS, no need to check further
+# 
+# Get the AS rank/ get peers
+#             
+# sys.exit('Checking execution')
+    
+
 #Filter the cidrs and IPs into a mask (for now /26)
 masked_ips = []
 masked_cidrs = []
@@ -70,6 +166,8 @@ with open('JSON/hitlist_support.json', 'r') as f:
 
 with open('JSON/hitlist.json', 'r') as f:
     hitlist = json.load(f)
+
+#Code to transform the histlists into acceptable format for quicker execution
 
 for i in range(len(ips)):
     if len(ips[i]) > 0:
