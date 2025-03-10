@@ -98,9 +98,10 @@ def main(lib_geoloc,metro_geolocs):
     
     return close_group,metro_group
 
-geolocs = [('48.474422','-122.323685')]
-library_names = ['Burlington Public Library, WA']
-states = ['Washington']
+geolocs = [('48.474422','-122.323685'),('36.122069','-82.818696'),('25.944307327270508','-97.50846862792969'),('30.68833351135254','-88.04679870605469'),('36.909472','-95.963552'),('32.7784456','-79.93269'),('38.9911446','-77.0765288'),('41.595119','-102.851207'),('39.745185','-105.000679'),('30.237029','-90.91548')]
+library_names = ['Burlington Public Library, WA','Huntsville Public Library, TN','Brownsville Public Library, TX','Mobile Public Library, AL','Iowa Tribe of Oklahoma Public Library, OK','Charleston Library Society, SC','Chevy Chase Community Branch Library,MD','Broadwater Public Library, NE','Auraria Library, CO','River Parishes Community College Library, LA']
+#[s,s,l,l,s,s,l,s,l,s] --> Area description, l --> bigger/richer
+states = ['Washington','Tennessee','Texas','Alabama','Oklahoma','South Carolina','Maryland','Nebraska','Colorado','Louisiana']
 
 for i in range(len(library_names)):
     library_name = library_names[i]
