@@ -52,15 +52,12 @@ def get_file():
 
     return data['objects']
 
-def main(lib_geoloc):
+def main(lib_geoloc,metro_geolocs):
     data = get_file()
     close_group = {}
-    far_group = {}
-    mid_group = {}
-    close_max = math.inf
-    far_min = -1
+    metro_group = {}
 
-    country_codes = set()
+    #Rewrite this to get the 5 closest probes to the library and the 5 closest probes to the metro area
     for probe in tqdm(data):
         country = probe['country_code']
         if country != 'US' or probe['status_name'] != 'Connected' or probe['is_public'] == False:
@@ -68,47 +65,66 @@ def main(lib_geoloc):
         lat_long = str(probe['latitude']),str(probe['longitude'])
         id = probe['id']
 
-        distance = geodesic(lib_geoloc, lat_long).km
-        if distance < close_max:
-            curr_keys = list(close_group.keys())
-            curr_keys.append(distance)
-            close_max = max(curr_keys)
-            close_group[distance] = id
+        distance = geodesic(lib_geoloc, lat_long).miles
+        if distance > 45:
+            continue
+        if len(close_group) < 10:
+            close_group[id] = distance
+        else:
+            if distance < max(close_group.values()):
+                close_group.pop(max(close_group,key=close_group.get))
+                close_group[id] = distance
 
-            #The 4 here is for a max of 3 items in the group
-            if len(close_group.keys()) >= 11:
-                close_group.pop(close_max)
+    for probe in tqdm(data):
+        country = probe['country_code']
+        if country != 'US' or probe['status_name'] != 'Connected' or probe['is_public'] == False:
+            continue
+        lat_long = str(probe['latitude']),str(probe['longitude'])
+        id = probe['id']
+
+        for metro in metro_geolocs:
+            metro_dist = str(metro[0]),str(metro[1])
+            metro_distance = geodesic(metro_dist, lat_long).miles
+            #Aleady got the closest possbile 10 probes in a 45 mile radius
+            if id in close_group.values() or metro_distance > 30:
+                continue
+            if len(metro_group) < 50:
+                metro_group[id] = metro_distance
+            else:
+                if distance < max(metro_group.values()):
+                    metro_group.pop(max(metro_group,key=metro_group.get))
+                    metro_group[id] = metro_distance
         
-        if distance > far_min:
-            curr_keys = list(far_group.keys())
-            curr_keys.append(distance)
-            far_min = min(curr_keys)
-            far_group[distance] = id
+    
+    return close_group,metro_group
 
-            #The 4 here is for a max of 3 items in the group
-            if len(far_group.keys()) >= 11:
-                far_group.pop(far_min)
+geolocs = [('48.474422','-122.323685')]
+library_names = ['Burlington Public Library, WA']
+states = ['Washington']
 
-        if distance > 2*close_max and distance < 0.5*far_min and len(mid_group.keys()) < 10:
-            mid_group[distance] = id
-        
-    return close_group,far_group,mid_group
+for i in range(len(library_names)):
+    library_name = library_names[i]
+    state = states[i]
+    geoloc = geolocs[i]
+    with open('Probe_files/state_geoloc_density.json') as f:
+        try:
+            state_data = json.load(f)[state]
+        except KeyError:
+            print(f"Error: No data for {state}")
 
-geoloc = ('48.474422','-122.323685')
-library_name = 'Burlington Public Library, WA'
+        metro_geoloc = state_data['top_density_geoloc']
 
-close_group,far_group,mid_group = main(geoloc)
-print(f"Close Group: {close_group}")
-print(f"Far Group: {far_group}")
-print(f"Mid Group: {mid_group}")
-data = {'Close':close_group,'Far':far_group,'Mid':mid_group}
+    close_group,metro_group = main(geoloc,metro_geoloc)
+    print(f"Close Group: {len(close_group)}")
+    print(f"Metro Group: {len(metro_group)}")
+    data = {'Close':close_group,'Metro':metro_group}
 
-#Use this to create a trace vantage selector from an area close to the library and the nearest metropolitan area
-#That is not the current metro(if current is a metropolitan area)
-#Use the CDC data, and find the median population desnity in each city per state, keep a record of all the 
-## cities over the median range of pop density -- get their geolocation
-#Find a probe close to each of these metropolitan areas and 5 closest probes near the city -- make sure no repeat happens
+    #Use this to create a trace vantage selector from an area close to the library and the nearest metropolitan area
+    #That is not the current metro(if current is a metropolitan area)
+    #Use the CDC data, and find the median population desnity in each city per state, keep a record of all the 
+    ## cities over the median range of pop density -- get their geolocation
+    #Find a probe close to each of these metropolitan areas and 5 closest probes near the city -- make sure no repeat happens
 
-#Saving the data
-with open('JSON/grouped_probes.json', 'w') as f:
-    json.dump(data, f, indent=4)
+    #Saving the data
+    with open(f'JSON/grouped_probes_{library_name}.json', 'w') as f:
+        json.dump(data, f, indent=4)
