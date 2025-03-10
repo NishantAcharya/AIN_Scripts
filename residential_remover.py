@@ -51,6 +51,34 @@ def break_cidr(cidr, target_mask):
 
     return subnets
 
+def is_subnet(network1_str, network2_str):
+  """
+  Checks if network1 is a subnet of network2.
+
+  Args:
+    network1_str: The first network in CIDR notation (e.g., "192.168.1.0/24").
+    network2_str: The second network in CIDR notation (e.g., "192.168.0.0/16").
+
+  Returns:
+    True if network1 is a subnet of network2, False otherwise.
+  """
+  network1 = ipaddress.ip_network(network1_str)
+  network2 = ipaddress.ip_network(network2_str)
+  return network1.subnet_of(network2)
+
+def apply_netmask(ip, mask):
+    """
+    Apply a netmask to an IP address.
+
+    Args:
+        ip: The IP address to apply the netmask to.
+        mask: The netmask to apply to the IP address.
+
+    Returns:
+        The IP address with the netmask applied.
+    """
+    return str(ipaddress.ip_network(f"{ip}/{mask}", strict=False))
+
 #Read the JSON File and remove the residential IPs, then coagulate under CIDRs and select 1 IP per CIDR
 with open('rdns_info.json', 'r') as f:
     data = json.load(f)
@@ -136,7 +164,7 @@ with open('JSON/filtered_rdns_info.json', 'w') as f:
 #             
 # sys.exit('Checking execution')
     
-
+print('Masking After Residential Filtering')
 #Filter the cidrs and IPs into a mask (for now /26)
 masked_ips = []
 masked_cidrs = []
@@ -161,22 +189,43 @@ filtered_ips = []
 filtered_cidrs = []
 
 #Loading hitlists
-with open('JSON/hitlist_support.json', 'r') as f:
-    hitlist_sp = json.load(f)
-
-with open('JSON/hitlist.json', 'r') as f:
+with open('JSON/updated_hitlist.json', 'r') as f:
     hitlist = json.load(f)
 
-#Code to transform the histlists into acceptable format for quicker execution
+print('Finding Hitlist IPs')
+for i in tqdm(range(len(ips))):
+    if len(masked_ips[i]) > 0:
+        #If the /26 CIDR is in the updated hitlist, then grab an IP from it
+        #If the CIDR is smaller than /26 then run through the list and check if there's an IP match
 
-for i in range(len(ips)):
-    if len(ips[i]) > 0:
-        #Load the hitlist and check if the IP exists, if the score is less than 0, then check if it is in it's /24 from support
-        #If none found, choose a random IP from the ones we have, but keep a count so we can report it
-        idx = np.random.randint(0,len(ips[i]))
-        
-        filtered_ips.append(ips[i][idx])
-        filtered_cidrs.append(cidrs[i])
+        net_bits = int(masked_cidrs[i].split('/')[1])
+        if net_bits == 26:
+            try:
+                h_ips = hitlist[masked_cidrs[i]]
+                idx = np.random.randint(0,len(h_ips))
+                filtered_ips.append(h_ips[idx])
+                filtered_cidrs.append(masked_cidrs[i])
+            except KeyError:
+                idx = np.random.randint(0,len(masked_ips[i]))
+                filtered_ips.append(masked_ips[i][idx])
+                filtered_cidrs.append(masked_cidrs[i])
+        else:
+            net_ip = masked_cidrs[i].split('/')[0]
+            masked = apply_netmask(net_ip, 26)
+            try:
+                h_ips = hitlist[masked]
+                for ip in masked_ips[i]:
+                    if ip in h_ips:
+                        filtered_ips.append(ip)
+                        filtered_cidrs.append(masked_cidrs[i])
+                        break
+            except KeyError:
+                idx = np.random.randint(0,len(masked_ips[i]))
+                filtered_ips.append(masked_ips[i][idx])
+                filtered_cidrs.append(masked_cidrs[i])
+
+
+
             
 with open('filtered_ips.txt', 'w') as f:
     for i in range(len(filtered_ips)):

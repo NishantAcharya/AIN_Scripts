@@ -99,9 +99,6 @@ def count_lines_in_file(filename):
     return 0
   
 #TODO: Check if multiple measurements can be made at once here
-#Yeah this can be done, will be much faster to do bulk set ups
-#Schedule the first bulk for 30 minutes, 5 minutes in advance
-#Wait until at least 500 are cleared up and then schedule them together
 def create_trace(probe_ids,ip,key,st,et):
 
     if ip == None or ip == 'None':
@@ -140,90 +137,84 @@ def create_trace(probe_ids,ip,key,st,et):
 
     return response['measurements'][0]
 
+def create_trace_test(probe_ids,ips,key,st,et):
+    #grabbing all the probe_ids:
+    
+    probes = ""
+    for probe in probe_ids:
+        probes+= str(probe)+","
+    
+    probes = probes[:-1]
+    traces = []
+    for ip in ips:
+       current_name = ip+'-'+'AIN'
+       trace = Traceroute(af=4, target=ip, description=current_name,packets=1,protocol="ICMP")
+       traces.append(trace)
+    source = AtlasSource(
+        type="probes",
+        value=probes,
+        requested = len(probe_ids),
+        tags={"include":["system-ipv4-works"]}
+    )
+    atlas_request = AtlasCreateRequest(
+        start_time=st,
+        stop_time=et,
+        key=key,
+        measurements=traces,
+        sources=[source],
+        is_oneoff=False
+    )
 
-def main(buffer_size, producer_file, consumer_file, inpt_file,secure_key,prbs):
-    print('Starting producer...')
-  
-    consumed = 0
-    produced = 0
-    exists_consumer = False
+    (is_success, response) = atlas_request.create()
+    if not is_success:
+        raise Exception("Measurement Not Created, Please check reponse\n \t"+str(response))
 
-    #Checking if the main IP file exists
-    if not os.path.exists(inpt_file):
-        raise Exception(f"Error: File '{inpt_file}' not found.")
+    return response['measurements'][0]
 
-    if not os.path.exists(producer_file):
-        print(f"Warning: File '{producer_file}' not found. Making producer file.")
-        fd = open(producer_file, 'w')
-        fd.close()
-        exists_producer = True
+def retreive_msm(msm):
+    kwargs = {
+        "msm_id": msm
+    }
+    #Checking if the measurement stopped
+    status = Measurement(id=msm).status
+    while(status != "Stopped"):
+        if(status == "No suitable probes" or status == "Failed" or status == "Archived"):
+            break
+        print("--Waiting for the Measurement : ", msm, " --")
+        time.sleep(180) #Sleeping for 3 minutes
+        status = Measurement(id=msm).status
+    print("--Recieved Measurement--")
+    
+    
 
-    inpts = count_lines_in_file(inpt_file)
+    is_success, results = AtlasResultsRequest(**kwargs).create()
+    
+    if(Measurement(id=msm).status == "No suitable probes" or Measurement(id=msm).status == "Failed" or Measurement(id=msm).status == "Archived"):
+        is_success = False
+    
 
-    #Current File line
-    current_line = count_lines_in_file(producer_file) + 1
-    while produced < inpts:
-        if not os.path.exists(consumer_file):
-          print(f"Warning: File '{consumer_file}' not found. Producer to assumer 0 consumed")
-        else:
-            consumed = count_lines_in_file(consumer_file)
-            print(f'Consumed: {consumed}')
-        
-        produced = count_lines_in_file(producer_file)
-        print(f'Produced: {produced} -- Inpts: {inpts}')
+    return results
 
-        if produced - consumed >= buffer_size:
-           print('Buffer full...')
-           time.sleep(300)
-           continue
-        
-        to_read = abs(buffer_size - abs(produced - consumed))
-        print(f'To read: {to_read}')
-        
-        print('Producing...')
-        lines = read_n_lines_from_line(inpt_file, current_line, to_read)
-        current_line += to_read
-        #Extract the IPs from the line, but not the CIDRs
-        ips = [line.strip().split('-')[0] for line in lines]
-        split_key = secure_key.split('-')
-        key = '-'.join(split_key[1:-1])
+""""98.232.25.1-98.232.25.0/26
+98.232.25.93-98.232.25.64/26
+98.232.25.177-98.232.25.128/26
+98.232.25.208-98.232.25.192/26
+98.232.26.2-98.232.26.0/26
+98.232.26.117-98.232.26.64/26
+98.232.26.168-98.232.26.128/26
+"""
+def main():
+    #probes = [21003,55451,1009747,10342,1145,52574,53097,55692,1008382,30350]
+    #ips = ['98.232.25.1','98.232.25.93','98.232.25.177','98.232.25.208','98.232.26.168']
 
-        #Change this to not be adaptive and just use 2K requests but 30 minutes in advance
-        #Also adjust the start and the end time here to be 30 minutes in advance
-        #Any susbequent ones get scheduled 10 minutes from current time and end in 30 minutes from current time
+    #secure_key = '1c3d00e0-cd3b-46eb-916a-33d0396750ec'
 
-        #The start time deviation
-        start_time = datetime.now(timezone.utc)+timedelta(minutes=15)
-        end_time = datetime.now(timezone.utc)+timedelta(minutes=40)
-        for i in range(len(ips)):
-            ip = ips[i]
-            probe = prbs
-            line = lines[i]
-            msm = create_trace(probe,ip,key,start_time,end_time)
+    #st = datetime.now(timezone.utc)+timedelta(minutes=1)
+    #et = datetime.now(timezone.utc)+timedelta(minutes=11)
+    #msms = create_trace_test(probes,ips,secure_key,st,et)
 
-            new_line = line + '-' + str(msm) + '\n'
+    #print(msms)
+    print(retreive_msm(87628980))
+    print('status:',Measurement(id=87628980).status)
 
-            with open(producer_file, 'a') as file:
-              file.write(new_line)     
-
-#My Key
-#secure_key = '1HHbx12-1c3d00e0-cd3b-46eb-916a-33d0396750ec-JggFtv'
-
-#Alex's Key
-secure_key =  '1002abbbeg-42f5aee4-e4d0-4570-a5cf-b31384860e44-Xyzngo'
-
-#probes = [21003,55451,1009747,10342,1145,52574,53097,55692,1008382,30350]
-#Redo Probe collection here, only select the unqiue probes
-probes = []
-data = []
-with open('JSON/grouped_probes.json') as f:
-    data = json.load(f)
-
-for key in data.keys():
-    group = data[key]
-    for dist in group.keys():
-        probes.append(data[key][dist])
-
-probes = list(set(probes))
-
-main(2000,'producer_trace.txt','consumer_trace.txt','filtered_ips.txt',secure_key,probes)
+main()

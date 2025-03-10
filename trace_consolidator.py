@@ -42,11 +42,18 @@ def write_lines_to_file(filename, lines):
 def read_traceroute(folder_names, dest_file):
     data = {}
     data_lines = []
+    folder_count = 0
+    weird_count = 0
+    data_count = 0
+    ips_t = set()
     for folder in folder_names:
         #Walking through files in the folder
         files = get_all_files_in_folder(folder)
+        network_error_count = 0
         for file in tqdm(files):
+            folder_count += 1
             if '.json' not in file:
+                weird_count += 1
                 continue
             
             file_path = folder+'/'+file
@@ -55,12 +62,16 @@ def read_traceroute(folder_names, dest_file):
 
             msm_id = file.split('-')[0].strip()
             ip = file.split('-')[1].strip()
+            #Remove later
+            ips_t.add(ip)
             cidr = file.split('-')[2].strip()
             
             ip_data = {'Failed': False, 'CIDR' :cidr.replace("?","/").split(".")[0],'MSM_ID': msm_id}
 
             if ip not in temp.keys():
+               print(f'IP {ip} not in file {file}')
                ip_data['Failed'] = True
+               data[ip] = ip_data
                continue
 
             #Getting the traceroutes and last_hop_ip per prb
@@ -70,8 +81,16 @@ def read_traceroute(folder_names, dest_file):
                 traceroute_full = item['result']
                 last_hop_ip = item['src_addr'] #Start with the source address
 
-                if ipaddress.ip_address(last_hop_ip).is_private:
-                    last_hop_ip = None
+                try:
+                  if ipaddress.ip_address(last_hop_ip).is_private:
+                      last_hop_ip = None
+                except ValueError:
+                   network_error_count += 1
+                   prb_item['Dest_Replied'] = False
+                   ip_data['Failed'] = True
+                   ip_data[item['prb_id']] = prb_item
+                   continue
+                  
 
                 for hop in traceroute_full:
                     try:
@@ -100,11 +119,18 @@ def read_traceroute(folder_names, dest_file):
 
             
             data[ip] = ip_data
+            data_count += 1
     write_lines_to_file(dest_file, data_lines)
+    print(f'Network Errors: {network_error_count}')
+    print(f'Folder Count: {folder_count}')
+    print(f'Weird Count: {weird_count}')
+    print(f'Data Count: {data_count}')
+    print(f'IPs: {len(ips_t)}')#Some IPs are overlapping from the original CIDRs sepration -- probably due to there being a /28 and a /26
+    #From two datasets
     return data
 
 def main():
-    folder_names = ['JSON/Feb-25-2025']
+    folder_names = ['JSON/Feb-26-2025_fixed']
     dest_file = 'ping_inpt.txt'
     data = read_traceroute(folder_names, dest_file)
     #In Future need a way to keep track of the library name

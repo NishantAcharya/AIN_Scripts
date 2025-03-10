@@ -118,6 +118,9 @@ def save_to_file_ping(data,entry_msm,entry_ip,entry_cidr):
       today = date.today()
       date_t = today.strftime("%b-%d-%Y")
       current_time = datetime.now().strftime("%H-%M-%S")
+
+      just_msms = {}
+      just_msms[entry_ip] = data
   
       #Make sure there is a JSON folder in the same place as this script
       dirname = "JSON/"+date_t+"/"
@@ -125,7 +128,7 @@ def save_to_file_ping(data,entry_msm,entry_ip,entry_cidr):
       os.makedirs(os.path.dirname(dirname), exist_ok=True)
       filename = dirname+ str(entry_msm)+ '-'+str(entry_ip)+'-'+str(entry_cidr).replace('/','?')+".json"
       with open(filename, "w+") as outfile: 
-          json.dump(data, outfile)
+          json.dump(just_msms, outfile)
 
 
 
@@ -200,6 +203,7 @@ def main(buffer_size, producer_file, consumer_file, inpt_file,secure_key):
               consumed += 1
 
             status = check_status(msm)
+            print(f'MSM:{msm}, Status: {status}')
             if status == "Stopped" or status == "No suitable probes" or status == "Failed" or status == "Archived":
                 results = retreive_msm(msm)
                 save_to_file_ping(results,msm,ip,cidr)
@@ -225,7 +229,7 @@ def main(buffer_size, producer_file, consumer_file, inpt_file,secure_key):
 #Alex's Key
 secure_key =  '1002abbbeg-42f5aee4-e4d0-4570-a5cf-b31384860e44-Xyzngo'
 
-main(1000,'producer.txt','consumer.txt','responsive_ips.txt',secure_key)
+main(1000,'producer_trace.txt','consumer_trace.txt','filtered_ips.txt',secure_key)
 #Clear producer and consumer files
 #open('producer.txt', 'w').close()
 #open('consumer.txt', 'w').close()
