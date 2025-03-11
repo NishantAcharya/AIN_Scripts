@@ -64,9 +64,11 @@ def main(lib_geoloc,metro_geolocs):
             continue
         lat_long = str(probe['latitude']),str(probe['longitude'])
         id = probe['id']
+        ip_v4 = probe['address_v4']
+        ip_v6 = probe['address_v6']
 
         distance = geodesic(lib_geoloc, lat_long).miles
-        if distance > 45:
+        if distance > 35:
             continue
         if len(close_group) < 10:
             close_group[id] = distance
@@ -88,23 +90,43 @@ def main(lib_geoloc,metro_geolocs):
             #Aleady got the closest possbile 10 probes in a 45 mile radius
             if id in close_group.values() or metro_distance > 30:
                 continue
-            if len(metro_group) < 50:
+            if len(metro_group) < 40:
                 metro_group[id] = metro_distance
             else:
                 if distance < max(metro_group.values()):
                     metro_group.pop(max(metro_group,key=metro_group.get))
                     metro_group[id] = metro_distance
+
+    #Getting the IPs
+    for probe in tqdm(data):
+        country = probe['country_code']
+        if country != 'US' or probe['status_name'] != 'Connected' or probe['is_public'] == False:
+            continue
+        lat_long = str(probe['latitude']),str(probe['longitude'])
+        id = probe['id']
+        ip_v4 = probe['address_v4']
+        ip_v6 = probe['address_v6']
+
+        if id in close_group.keys():
+            close_group[id] = (close_group[id],ip_v4,ip_v6)
+        if id in metro_group.keys():
+            metro_group[id] = (metro_group[id],ip_v4,ip_v6)
         
     
     return close_group,metro_group
+#Pobe existence (at least 3 nearby probes) is a factor in library selection
+geolocs = [('42.2450259','-84.7458006'),('44.9731694','-93.243012'),('48.474422','-122.323685'), ('36.909472','-95.963552'), ('32.7784456','-79.93269'), 
+           ('38.9911446','-77.0765288'), ('39.745185','-105.000679'), ('30.237029','-90.91548'),('40.829202','-84.925192'),('40.39101791381836','-111.91393280029297')]
+library_names = ['Stockwell-Mudd Libraries','Elmer L. Andersen Library','Burlington Public Library, WA', 'Iowa Tribe of Oklahoma Public Library, OK', 
+                 'Charleston Library Society, SC', 'Chevy Chase Community Branch Library, MD', 
+                 'Auraria Library, CO', 'River Parishes Community College Library, LA', 'Adams Public Library, IN','Saratoga Springs Public Library, UT']
+states = ['Michigan','Minnesota','Washington', 'Oklahoma', 'South Carolina', 'Maryland', 'Colorado', 'Louisiana', 'Indiana','Utah']
 
-geolocs = [('48.474422','-122.323685'),('36.122069','-82.818696'),('25.944307327270508','-97.50846862792969'),('30.68833351135254','-88.04679870605469'),('36.909472','-95.963552'),('32.7784456','-79.93269'),('38.9911446','-77.0765288'),('41.595119','-102.851207'),('39.745185','-105.000679'),('30.237029','-90.91548')]
-library_names = ['Burlington Public Library, WA','Huntsville Public Library, TN','Brownsville Public Library, TX','Mobile Public Library, AL','Iowa Tribe of Oklahoma Public Library, OK','Charleston Library Society, SC','Chevy Chase Community Branch Library,MD','Broadwater Public Library, NE','Auraria Library, CO','River Parishes Community College Library, LA']
-#[s,s,l,l,s,s,l,s,l,s] --> Area description, l --> bigger/richer
-states = ['Washington','Tennessee','Texas','Alabama','Oklahoma','South Carolina','Maryland','Nebraska','Colorado','Louisiana']
+
 
 for i in range(len(library_names)):
     library_name = library_names[i]
+    print(f"Processing {library_name}")
     state = states[i]
     geoloc = geolocs[i]
     with open('Probe_files/state_geoloc_density.json') as f:
