@@ -1,0 +1,1 @@
+#TODO: This script downloads pings from RIPE Atlas from the download.txt
