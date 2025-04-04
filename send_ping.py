@@ -111,6 +111,13 @@ def create_trace(probe_ids,ip,key,st):
       probes+= str(probe)+","
   
   probes = probes[:-1]
+
+  source = AtlasSource(
+      type="probes",
+      value=probes,
+      requested = len(probe_ids),
+      tags={"include":["system-ipv4-works"]}
+  )
   
   current_name = ip+'-'+'AIN-PING'
 
@@ -120,12 +127,7 @@ def create_trace(probe_ids,ip,key,st):
       description=current_name
   )
 
-  source = AtlasSource(
-      type="probes",
-      value=probes,
-      requested = len(probe_ids),
-      tags={"include":["system-ipv4-works"]}
-  )
+
   atlas_request = AtlasCreateRequest(
       start_time=datetime.now(timezone.utc)+timedelta(minutes=st+1),
       stop_time=datetime.now(timezone.utc)+timedelta(minutes=st+11),

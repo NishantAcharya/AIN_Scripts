@@ -98,7 +98,7 @@ def count_lines_in_file(filename):
     print(f"Error: File '{filename}' not found.")
     return 0
   
-#TODO: Check if multiple measurements can be made at once here
+#Check if multiple measurements can be made at once here
 #Yeah this can be done, will be much faster to do bulk set ups
 #Schedule the first bulk for 30 minutes, 5 minutes in advance
 #Wait until at least 500 are cleared up and then schedule them together
@@ -125,6 +125,52 @@ def create_trace(probe_ids,ip,key,st,et):
         requested = len(probe_ids),
         tags={"include":["system-ipv4-works"]}
     )
+    atlas_request = AtlasCreateRequest(
+        start_time=st,
+        stop_time=et,
+        key=key,
+        measurements=[trace],
+        sources=[source],
+        is_oneoff=False
+    )
+
+    (is_success, response) = atlas_request.create()
+    if not is_success:
+        raise Exception("Measurement Not Created, Please check reponse\n \t"+str(response))
+
+    return response['measurements'][0]
+
+def create_trace_bulk(probe_ids,ips,key,st,et):
+
+
+    
+
+
+    #grabbing all the probe_ids:
+
+    probes = ""
+    for probe in probe_ids:
+        probes+= str(probe)+","
+
+    probes = probes[:-1]
+
+    source = AtlasSource(
+        type="probes",
+        value=probes,
+        requested = len(probe_ids),
+        tags={"include":["system-ipv4-works"]}
+    )
+
+    
+
+    traces = []
+    for ip in ips:
+      if ip == None or ip == 'None':
+        return '?1'
+      current_name = ip+'-'+'AIN'
+       
+      trace = Traceroute(af=4, target=ip, description=current_name,packets=1,protocol="ICMP")
+    
     atlas_request = AtlasCreateRequest(
         start_time=st,
         stop_time=et,

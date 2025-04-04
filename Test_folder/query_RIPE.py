@@ -148,7 +148,7 @@ def create_trace_test(probe_ids,ips,key,st,et):
     traces = []
     for ip in ips:
        current_name = ip+'-'+'AIN'
-       trace = Traceroute(af=4, target=ip, description=current_name,packets=1,protocol="ICMP")
+       trace = Traceroute(af=4, target=ip, description=current_name,packets=1,protocol="ICMP",timeout=1000)
        traces.append(trace)
     source = AtlasSource(
         type="probes",
