@@ -128,6 +128,7 @@ def save_to_file_ping(data):
           json.dump(data, outfile)
 
 
+#TODO: Read the entries and if the stop time has passed, then move it to the download file
 
 def main(buffer_size, producer_file, consumer_file, inpt_file,secure_key):
   #The script will go through the  producer file and read the inputs there
@@ -223,10 +224,10 @@ def main(buffer_size, producer_file, consumer_file, inpt_file,secure_key):
   #Saving the data
   save_to_file_ping(consumed_data)
 #My Key
-#secure_key = '1HHbx12-1c3d00e0-cd3b-46eb-916a-33d0396750ec-JggFtv'
+secure_key = '1HHbx12-1c3d00e0-cd3b-46eb-916a-33d0396750ec-JggFtv'
 
 #Alex's Key
-secure_key =  '1002abbbeg-42f5aee4-e4d0-4570-a5cf-b31384860e44-Xyzngo'
+#secure_key =  '1002abbbeg-42f5aee4-e4d0-4570-a5cf-b31384860e44-Xyzngo'
 
 main(2000,'producer_trace.txt','consumer_trace.txt','filtered_ips.txt',secure_key,probes)
 #Clear producer and consumer files

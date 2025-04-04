@@ -143,6 +143,7 @@ def create_trace(probe_ids,ip,key,st):
 
   return response['measurements'][0]
 
+#TODO: Read 2K lines from the file and produce them -- save the stop time along with it
 
 def main(buffer_size, producer_file, consumer_file, inpt_file,secure_key,prbs):
     print('Starting producer...')
