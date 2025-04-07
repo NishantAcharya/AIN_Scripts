@@ -98,7 +98,7 @@ def count_lines_in_file(filename):
     print(f"Error: File '{filename}' not found.")
     return 0
   
-#TODO: Check if multiple measurements can be made at once here
+#Check if multiple measurements can be made at once here
 #Yeah this can be done, will be much faster to do bulk set ups
 #Schedule the first bulk for 30 minutes, 5 minutes in advance
 #Wait until at least 500 are cleared up and then schedule them together
@@ -141,6 +141,75 @@ def create_trace(probe_ids,ip,key,st,et):
     return response['measurements'][0]
 
 
+def create_trace_bulk(probe_ids,ips,key,st,et):
+
+  #grabbing all the probe_ids:
+
+  probes = ""
+  for probe in probe_ids:
+      probes+= str(probe)+","
+
+  probes = probes[:-1]
+
+  source = AtlasSource(
+      type="probes",
+      value=probes,
+      requested = len(probe_ids),
+      tags={"include":["system-ipv4-works"]}
+  )
+
+  traces_inpt = []
+  traces = []
+
+  #Creating the measurements
+  for i in range(len(ips)):
+    ip = ips[i]
+    if ip == None or ip == 'None':
+        traces.append('?1')
+        continue
+    current_name = ip+'-'+'AIN'
+
+    trace = Traceroute(af=4, target=ip, description=current_name,packets=1,protocol="ICMP")
+
+    traces_inpt.append(trace)
+    traces.append(0)
+
+  atlas_request = AtlasCreateRequest(
+      start_time=st,
+      stop_time=et,
+      key=key,
+      measurements=traces_inpt,
+      sources=[source],
+      is_oneoff=False
+  )
+
+  (is_success, response) = atlas_request.create()
+  if not is_success:
+      print(len(ips))
+      print(len(traces_inpt))
+      print(probes)
+      raise Exception("Measurement Not Created, Please check reponse\n \t"+str(response))
+
+
+  inital_msms = response['measurements']
+  print(response)
+  msms = []
+  count = 0
+  i = 0
+  while count < len(traces):
+    if traces[i] == '?1':
+      msms.append('?1')
+    else:
+      msms.append(inital_msms[count])
+      count += 1
+
+    i += 1
+  print(msms)
+  return msms
+    
+
+
+#TODO: Bulk traceroute and saving all the msms one by one
 def main(buffer_size, producer_file, consumer_file, inpt_file,secure_key,prbs):
     print('Starting producer...')
   
@@ -193,21 +262,28 @@ def main(buffer_size, producer_file, consumer_file, inpt_file,secure_key,prbs):
         #Any susbequent ones get scheduled 10 minutes from current time and end in 30 minutes from current time
 
         #The start time deviation
-        start_time = datetime.now(timezone.utc)+timedelta(minutes=15)
-        end_time = datetime.now(timezone.utc)+timedelta(minutes=40)
+
+        #There needs to be a check if the measurment is not stopped, as in check status
+        start_time = datetime.now(timezone.utc)+timedelta(minutes=3)
+        end_time = start_time+timedelta(minutes=8)
+        #Creating the measurement -- add end time here   
+
+        #Bulk traceroute
+        msms = create_trace_bulk(prbs,ips,key,start_time,end_time)
+        new_lines = []
         for i in range(len(ips)):
-            ip = ips[i]
-            probe = prbs
-            line = lines[i]
-            msm = create_trace(probe,ip,key,start_time,end_time)
+          new_line = lines[i] + '-' + str(msms[i]) + '\n'
+          new_lines.append(new_line)
 
-            new_line = line + '-' + str(msm) + '\n'
-
-            with open(producer_file, 'a') as file:
-              file.write(new_line)     
+        #Writing the new lines to the producer file
+        with open(producer_file, 'a') as file:
+          file.writelines(new_lines)
 
 #My Key
 #secure_key = '1HHbx12-1c3d00e0-cd3b-46eb-916a-33d0396750ec-JggFtv'
+
+#My other key
+#secure_key = 'oppA12-7e706d8e-8447-49fe-baf5-705d893c5aba-1dcb12'
 
 #Alex's Key
 secure_key =  '1002abbbeg-42f5aee4-e4d0-4570-a5cf-b31384860e44-Xyzngo'
@@ -226,4 +302,5 @@ for key in data.keys():
 
 probes = list(set(probes))
 
+#arg1 --> producer file, arg2 --> consumer file, arg3 --> inpt file
 main(2000,'producer_trace.txt','consumer_trace.txt','filtered_ips.txt',secure_key,probes)

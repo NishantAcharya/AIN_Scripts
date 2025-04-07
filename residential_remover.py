@@ -226,7 +226,7 @@ for i in tqdm(range(len(ips))):
 
 
 
-            
+#Name the output file         
 with open('filtered_ips.txt', 'w') as f:
     for i in range(len(filtered_ips)):
         ip = filtered_ips[i]

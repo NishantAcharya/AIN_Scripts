@@ -128,7 +128,6 @@ def save_to_file_ping(data):
           json.dump(data, outfile)
 
 
-
 def main(buffer_size, producer_file, consumer_file, inpt_file,secure_key):
   #The script will go through the  producer file and read the inputs there
   #Wait (This part will signify us checking the status of the items)
@@ -194,23 +193,23 @@ def main(buffer_size, producer_file, consumer_file, inpt_file,secure_key):
             if msm == '?1':
               print(f'No suitable hop to hit: {ip}')
               #save_to_file(key_ip,msm,ip,cidr,probe,{'Failed':True})
-              consumed_data[ip] = {'Failed':True}
+              #consumed_data[ip] = {'Failed':True}
               with open(consumer_file, 'a') as file:
                     file.write(item + '\n')
               consumed += 1
 
             status = check_status(msm)
-            if status == "Stopped" or status == "No suitable probes" or status == "Failed" or status == "Archived":
-                results = retreive_msm(msm)
+            if status == "Stopped":
+                #results = retreive_msm(msm)
                 #save_to_file(key_ip,msm,ip,cidr,probe,results)
-                consumed_data[ip] = results
+                #consumed_data[ip] = results
                 with open(consumer_file, 'a') as file:
                     file.write(item + '\n')
                 consumed += 1
             elif status == "No suitable probes" or status == "Failed" or status == "Archived":
                 print(f'Measurement Failed: {ip}')
                 #save_to_file(key_ip,msm,ip,cidr,probe,{'Failed':True})
-                consumed_data[ip] = {'Failed':True}
+                #consumed_data[ip] = {'Failed':True}
                 with open(consumer_file, 'a') as file:
                     file.write(item + '\n')
                 consumed += 1
@@ -221,12 +220,12 @@ def main(buffer_size, producer_file, consumer_file, inpt_file,secure_key):
       time.sleep(90)
 
   #Saving the data
-  save_to_file_ping(consumed_data)
+  #save_to_file_ping(consumed_data)
 #My Key
-#secure_key = '1HHbx12-1c3d00e0-cd3b-46eb-916a-33d0396750ec-JggFtv'
+secure_key = '1HHbx12-1c3d00e0-cd3b-46eb-916a-33d0396750ec-JggFtv'
 
 #Alex's Key
-secure_key =  '1002abbbeg-42f5aee4-e4d0-4570-a5cf-b31384860e44-Xyzngo'
+#secure_key =  '1002abbbeg-42f5aee4-e4d0-4570-a5cf-b31384860e44-Xyzngo'
 
 main(2000,'producer_trace.txt','consumer_trace.txt','filtered_ips.txt',secure_key,probes)
 #Clear producer and consumer files

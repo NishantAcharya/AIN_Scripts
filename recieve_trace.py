@@ -6,6 +6,7 @@ from ripe.atlas.cousteau import (
     AtlasSource,
     AtlasResultsRequest,
     AtlasCreateRequest,
+    AtlasStopRequest,
     Measurement
 )
 import pandas as pd
@@ -131,7 +132,6 @@ def save_to_file_ping(data,entry_msm,entry_ip,entry_cidr):
           json.dump(just_msms, outfile)
 
 
-
 def main(buffer_size, producer_file, consumer_file, inpt_file,secure_key):
   #The script will go through the  producer file and read the inputs there
   #Wait (This part will signify us checking the status of the items)
@@ -182,7 +182,7 @@ def main(buffer_size, producer_file, consumer_file, inpt_file,secure_key):
           break
 
         print(f"Nothing to consume, Sleeping")
-        time.sleep(600) #Sleep for a longer time than producer
+        time.sleep(540) #Sleep for a longer time than producer
         continue
       
       print('Passing through the produced items')
@@ -204,9 +204,9 @@ def main(buffer_size, producer_file, consumer_file, inpt_file,secure_key):
 
             status = check_status(msm)
             print(f'MSM:{msm}, Status: {status}')
-            if status == "Stopped" or status == "No suitable probes" or status == "Failed" or status == "Archived":
-                results = retreive_msm(msm)
-                save_to_file_ping(results,msm,ip,cidr)
+            if status == "Stopped":
+                #results = retreive_msm(msm)
+                #save_to_file_ping(results,msm,ip,cidr)
                 #consumed_data[ip] = results
                 with open(consumer_file, 'a') as file:
                     file.write(item + '\n')
@@ -222,14 +222,16 @@ def main(buffer_size, producer_file, consumer_file, inpt_file,secure_key):
           
       #Sleep for a short time
       print('Pass Ended, Sleeping before next pass')
-      time.sleep(600)
+      time.sleep(540)
 #My Key
 #secure_key = '1HHbx12-1c3d00e0-cd3b-46eb-916a-33d0396750ec-JggFtv'
 
 #Alex's Key
 secure_key =  '1002abbbeg-42f5aee4-e4d0-4570-a5cf-b31384860e44-Xyzngo'
 
-main(1000,'producer_trace.txt','consumer_trace.txt','filtered_ips.txt',secure_key)
+#Change the file names, and put the filtered_ips in the exact folders based on the .sh file
+
+main(2000,'producer_trace.txt','consumer_trace.txt','filtered_ips.txt',secure_key)
 #Clear producer and consumer files
 #open('producer.txt', 'w').close()
 #open('consumer.txt', 'w').close()
