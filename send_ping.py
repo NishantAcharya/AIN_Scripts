@@ -143,7 +143,71 @@ def create_trace(probe_ids,ip,key,st):
 
   return response['measurements'][0]
 
-#TODO: Read 2K lines from the file and produce them -- save the stop time along with it
+def create_trace_bulk(probe_ids,ips,key,st,et):
+
+  #grabbing all the probe_ids:
+
+  probes = ""
+  for probe in probe_ids:
+      probes+= str(probe)+","
+
+  probes = probes[:-1]
+
+  source = AtlasSource(
+      type="probes",
+      value=probes,
+      requested = len(probe_ids),
+      tags={"include":["system-ipv4-works"]}
+  )
+
+  pings_inpt = []
+  pings = []
+
+  #Creating the measurements
+  for i in range(len(ips)):
+    ip = ips[i]
+    if ip == None or ip == 'None':
+        pings.append('?1')
+        continue
+    current_name = ip+'-'+'AIN'
+
+    ping = Ping(af=4,target=ip,description=current_name)
+
+    pings_inpt.append(ping)
+    pings.append(0)
+
+  atlas_request = AtlasCreateRequest(
+      start_time=st,
+      stop_time=et,
+      key=key,
+      measurements=pings_inpt,
+      sources=[source],
+      is_oneoff=False
+  )
+
+  (is_success, response) = atlas_request.create()
+  if not is_success:
+      print(len(ips))
+      print(len(pings_inpt))
+      print(probes)
+      raise Exception("Measurement Not Created, Please check reponse\n \t"+str(response))
+
+
+  inital_msms = response['measurements']
+  print(response)
+  msms = []
+  count = 0
+  i = 0
+  while count < len(pings):
+    if pings[i] == '?1':
+      msms.append('?1')
+    else:
+      msms.append(inital_msms[count])
+      count += 1
+
+    i += 1
+  print(msms)
+  return msms
 
 def main(buffer_size, producer_file, consumer_file, inpt_file,secure_key,prbs):
     print('Starting producer...')
@@ -191,18 +255,19 @@ def main(buffer_size, producer_file, consumer_file, inpt_file,secure_key,prbs):
         split_key = secure_key.split('-')
         key = '-'.join(split_key[1:-1])
 
-        adpative_counter = 5
+        start_time = datetime.now(timezone.utc)+timedelta(minutes=3)
+        end_time = start_time+timedelta(minutes=8)
+
+        #Bulk traceroute
+        msms = create_trace_bulk(prbs,ips,key,start_time,end_time)
+        new_lines = []
         for i in range(len(ips)):
-            ip = ips[i]
-            probe = prbs
-            line = lines[i]
-            msm = create_trace(probe,ip,key,adpative_counter%10) #50 pings per minute
+          new_line = lines[i] + '-' + str(msms[i]) + '\n'
+          new_lines.append(new_line)
 
-            new_line = line + '-' + str(msm) + '\n'
-            adpative_counter+=1
-
-            with open(producer_file, 'a') as file:
-              file.write(new_line)     
+        #Writing the new lines to the producer file
+        with open(producer_file, 'a') as file:
+          file.writelines(new_lines)    
 
 #My Key
 #secure_key = '1HHbx12-1c3d00e0-cd3b-46eb-916a-33d0396750ec-JggFtv'
