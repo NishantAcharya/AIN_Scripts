@@ -80,9 +80,11 @@ def apply_netmask(ip, mask):
     return str(ipaddress.ip_network(f"{ip}/{mask}", strict=False))
 
 #Read the JSON File and remove the residential IPs, then coagulate under CIDRs and select 1 IP per CIDR
-with open('rdns_info.json', 'r') as f:
+input_file = sys.argv[1] #Results_{lib_name}/rdns_info.json
+input_file = input_file.replace(" ", "\ ")
+with open(input_file, 'r') as f:
     data = json.load(f)
-    
+
 ips = data['IP']
 rdns = data['RDNS']
 cidrs = data['CIDR']
@@ -99,73 +101,13 @@ cidr_data = {}
 for i in range(len(ips)):
     cidr_data[cidrs[i]] = ips[i]
 
-with open('JSON/filtered_rdns_info.json', 'w') as f:
+mid_path = sys.argv[2] #Results_{lib_name}/filtered_rdns_info.json
+mid_path = mid_path.replace(" ", "\ ")
+
+with open(mid_path, 'w') as f:
     json.dump(cidr_data, f, indent=4)
 
-#Get AS information from prefix 2 AS and AS rank here using the cidr_data keys
-# year = time.strftime("%Y")
-# month = time.strftime("%m")
-# day = time.strftime("%d")
-# day = str(int(day)-2)
-# if len(day) == 1:
-#     day = '0' + day
-# match_string = year + month + day
-# links = get_all_links('https://publicdata.caida.org/datasets/routing/routeviews-prefix2as/'+ year + '/'+month+'/')
-# pf2asgz = 'Probe_files/pf2as.gz'
-# try:
-#     output = [link for link in links if match_string in link][-1]
-# except:
-#     new_month = str(int(month)-1)
-#     if len(new_month) == 1:
-#         new_month = '0' + new_month
-#     
-#     day = '28'
-#     match_string = year + new_month + day
-#     output = [link for link in links if match_string in link][-1]
-# 
-# download_file('https://publicdata.caida.org/datasets/routing/routeviews-prefix2as/'+ year + '/'+month+'/'+output,pf2asgz)
-# pf2as = 'Probe_files/pf2as.pfx2as'
-# with gzip.open(pf2asgz, 'rb') as f_in:
-#     with open(pf2as, 'wb') as f_out:
-#         shutil.copyfileobj(f_in, f_out)
-# 
-# as_map_mid = {}
-# Removing duplicates and going for the least specific AS
-# with open(pf2as, 'r') as f:
-#     lines = f.readlines()
-#     for line in lines:
-#         parts = line.strip().split('\t')
-#         as_map_mid[parts[0]] = [parts[1],parts[2]]
-# 
-# as_map = {}
-# for key in as_map_mid.keys():
-#     new_key = key + '/' +as_map_mid[key][0]
-#     as_map[new_key] = as_map_mid[key][1]
-# 
-# all_ases = {}
-# cidr_keys = list(cidr_data.keys())
-# as_map_keys = list(as_map.keys())
-# This piece of code will collect all the ASes that are in the
-# print('Generating AS List')
-# for cidr in tqdm(as_map_keys):
-#     network = ipaddress.ip_network(cidr)
-#     
-#     for key in cidr_keys:
-#         key_net = ipaddress.ip_network(key)
-#         if network.overlaps(key_net):
-#             try:
-#                 check = all_ases[cidr]
-#             except KeyError:
-#                 all_ases[cidr] = set()
-#             all_ases[cidr].add(as_map[key])
-#             break #Already found this AS, no need to check further
-# 
-# Get the AS rank/ get peers
-#             
-# sys.exit('Checking execution')
-    
-print('Masking After Residential Filtering')
-#Filter the cidrs and IPs into a mask (for now /26)
+
 masked_ips = []
 masked_cidrs = []
 
@@ -226,8 +168,10 @@ for i in tqdm(range(len(ips))):
 
 
 
-#Name the output file         
-with open('filtered_ips.txt', 'w') as f:
+#Name the output file
+output_path = sys.argv[3] #Results_{lib_name}/filtered_ips.txt
+output_path = output_path.replace(" ", "\ ")       
+with open(output_path, 'w') as f:
     for i in range(len(filtered_ips)):
         ip = filtered_ips[i]
         cidr = filtered_cidrs[i]

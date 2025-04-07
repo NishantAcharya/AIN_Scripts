@@ -1,38 +1,24 @@
-libraries=("443 N Rexford Dr, Beverly Hills, CA, 90210" 
-"820 E Washington Ave, Burlington, WA, 98233" 
-"1307 Commerce Dr Suite 140, Saratoga Springs, UT, 84045"
-"602 E Cass St, Albion, MI, 49224" 
-"222 21st Ave S, Minneapolis, MN,  55455" 
-"335588 E. 750 Road, Perkins, OK, 74059"
-"164 King St, Charleston, SC, 29401"
-"8005 Connecticut Ave, Chevy Chase, MD, 20815"
-"1100 Lawrence St, Denver, CO, 80204" 
-"925 West Edenborne Parkway, Gonzales, LA, 70737" 
-"128 South 3rd Street, Decatur, IN, 46733")
+#!/bin/bash
 
-lans=("34.07327962493017" 
-"48.474422" 
-"40.39101791381836" 
-"42.2450259" 
-"44.9731694"
-"36.909472"
-"32.7784456"
-"38.9911446"
-"39.745185" 
-"30.189389" 
-"40.829202")
+libraries=()
+lans=()
+lons=()
+name=()
+state=()
 
-lons=("-118.39929344207874" 
-"-122.323685" 
-"-111.91393280029297" 
-"-84.7458006" 
-"-93.243012"
-"-95.963552"
-"-79.93269"
-"-77.0765288"
-"-105.000679"
-"-90.920184"
-"-84.925192")
+# Read from the Library_data.txt file and separate lines on '-'
+while IFS='-' read -r part1 part2 part3 part4 part5; do
+    part1=${part1//\//-}
+    part2=${part2//\//-}
+    part3=${part3//\//-}
+    part4=${part4//\//-}
+    part5=${part5//\//-}
+    lans+=("$part1")
+    lons+=("$part2")
+    name+=("$part3")
+    state+=("$part4")
+    libraries+=("$part5")
+done < ../Library_data.txt
 
 
 
@@ -41,10 +27,12 @@ for i in "${!libraries[@]}"; do
     library="${libraries[$i]}"
     lan="${lans[$i]}"
     lon="${lons[$i]}"
+    name="${name[$i]// /_}"
 
     echo "Library: $library"
     echo "Latitude: $lan"
     echo "Longitude: $lon"
+    echo "Name: $name"
     echo
     echo
 
@@ -91,21 +79,13 @@ for i in "${!libraries[@]}"; do
     # Do local whois
     python3 ./Local_whois/local_whois.py
 
-    # Rename and move the output folder to Done_Results
-    # Check if the folder exists
-    if [ -d "./Done_Results" ]; then
-        echo "The Done_Results folder exists"
-    else
-        mkdir Done_Results
-    fi
-
     # Check if the Results folder exists in Done_Results
-    if [ -d "./Done_Results/Results_$library" ]; then
+    if [ -d "../Results_$name" ]; then
         echo "The Results folder exists in Done_Results"
     else
-        mkdir ./Done_Results/Results_"$library"
+        mkdir ../Results_"$name"
     fi
 
     # Move the output folder to Done_Results
-    mv ./outputs ./Done_Results/Results_"$library"
+    mv ./outputs ../Results_"$name"
 done

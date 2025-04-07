@@ -15,6 +15,49 @@ from statistics import mean,mode,median
 import os
 from geopy.distance import geodesic
 
+#Check if the file exists
+def file_exists():
+    today = date.today()
+    year = today.year
+    month = today.month
+    day = today.day-1
+    if int(day) < 10:
+        str_day = '0'+str(day)
+    else:
+        str_day = str(day)
+    if int(month) < 10:
+        str_month = '0'+str(month)
+    else:
+        str_month = str(month)
+    
+    filename = str(year)+str_month+str_day+'.json.bz2'
+
+    file_path = os.path.join('Probe_files', filename)
+    return os.path.exists(file_path)
+
+def load_file():
+    today = date.today()
+    year = today.year
+    month = today.month
+    day = today.day-1
+    if int(day) < 10:
+        str_day = '0'+str(day)
+    else:
+        str_day = str(day)
+    if int(month) < 10:
+        str_month = '0'+str(month)
+    else:
+        str_month = str(month)
+
+    filename = str(year)+str_month+str_day+'.json'
+    file_save = 'Probe_files/'+filename
+
+    with open(file_save, 'r') as f:
+        data = json.load(f)
+
+    return data['objects']
+
+
 #Grabbing the file
 def get_file():
     today = date.today()
@@ -53,7 +96,11 @@ def get_file():
     return data['objects']
 
 def main(lib_geoloc,metro_geolocs):
-    data = get_file()
+    if not file_exists():
+        data = get_file()
+    else:
+        data = load_file()
+
     close_group = {}
     metro_group = {}
 
