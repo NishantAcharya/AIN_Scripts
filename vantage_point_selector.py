@@ -66,13 +66,15 @@ def main(lib_geoloc,metro_geolocs):
         id = probe['id']
         ip_v4 = probe['address_v4']
         ip_v6 = probe['address_v6']
-
+#Make sure the metro and the close probes are taking the smallest possible ones
+#Currently we are just taking the max for the close probes for some reason
         distance = geodesic(lib_geoloc, lat_long).miles
         if distance > 35:
             continue
         if len(close_group) < 10:
             close_group[id] = distance
         else:
+            #Check this
             if distance < max(close_group.values()):
                 close_group.pop(max(close_group,key=close_group.get))
                 close_group[id] = distance
@@ -84,6 +86,7 @@ def main(lib_geoloc,metro_geolocs):
         lat_long = str(probe['latitude']),str(probe['longitude'])
         id = probe['id']
 
+        
         for metro in metro_geolocs:
             metro_dist = str(metro[0]),str(metro[1])
             metro_distance = geodesic(metro_dist, lat_long).miles
