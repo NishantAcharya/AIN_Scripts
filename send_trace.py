@@ -302,4 +302,5 @@ for key in data.keys():
 
 probes = list(set(probes))
 
+#arg1 --> producer file, arg2 --> consumer file, arg3 --> inpt file
 main(2000,'producer_trace.txt','consumer_trace.txt','filtered_ips.txt',secure_key,probes)
