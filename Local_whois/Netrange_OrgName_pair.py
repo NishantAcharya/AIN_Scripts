@@ -10,18 +10,18 @@ from pathlib import Path
 
 
 #input files
-file_name1 = Path(__file__).resolve().parent / ".." / "Data_set" / "bulk_whois" / "Networks.txt"
-file_name2 =  Path(__file__).resolve().parent / ".." / "Data_set" / "bulk_whois" / "Organizations.txt"
+file_name1 = './Data_set/bulk_whois/Networks.txt'
+file_name2 =  './Data_set/bulk_whois/Organizations.txt'
 
 
 #output_cidr
-tmp_csv_file = Path(__file__).resolve().parent / ".." / "whois_data" / "cidr_orgName.csv"
-#netranges that don't have organization names
-no_orgname_file = Path(__file__).resolve().parent / ".." / "whois_data" / "no_orgname.csv"
-#netranges that don't have organization name and >= /24
-csv_file = Path(__file__).resolve().parent / ".." / "whois_data" / "cidr_greater_25.csv"
-small_cidr_csv_file = Path(__file__).resolve().parent / ".." / "whois_data" / "small_cidr.csv"
-dat_file = Path(__file__).resolve().parent / ".." / "whois_data" / "cidr.dat"
+tmp_csv_file = "./whois_data/cidr_orgName.csv"
+# netranges that don't have organization names
+no_orgname_file = "./whois_data/no_orgname.csv"
+# netranges that don't have organization name and >= /24
+csv_file = "./whois_data/cidr_greater_25.csv"
+small_cidr_csv_file = "./whois_data/small_cidr.csv"
+dat_file = "./whois_data/cidr.dat"
 
 
 #divide network ranges into cidrs
@@ -90,7 +90,7 @@ def process_org_blocks(block):
         return ["!", "!"]
     else:
         print("No orgname and orgID:")
-        print(blocks)   
+        print(block)   
         return ["!", "!"]         
 
 #write the output cidr into csv file
