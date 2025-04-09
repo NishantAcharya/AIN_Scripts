@@ -104,8 +104,13 @@ def main(lib_geoloc,metro_geolocs):
     close_group = {}
     metro_group = {}
 
+    violating_probes_df = pd.read_csv('CSV/violating_probes_paper.csv')
+    violating_probes = violating_probes_df['ProbeID'].tolist()
+
     #Rewrite this to get the 5 closest probes to the library and the 5 closest probes to the metro area
     for probe in tqdm(data):
+        if probe['id'] in violating_probes:
+            continue
         country = probe['country_code']
         if country != 'US' or probe['status_name'] != 'Connected' or probe['is_public'] == False:
             continue
