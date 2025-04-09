@@ -31,6 +31,11 @@ import geoip2.database
 import requests
 import sys
 
+#Files
+produce_file = sys.argv[1]
+consume_file = sys.argv[2]
+inpt_file = sys.argv[3]
+
 def read_n_lines_no_newlines(filename, n):
   """
   Reads the first n lines from a file and removes all newline characters ('\n') from each line.
@@ -227,7 +232,7 @@ secure_key = '1HHbx12-1c3d00e0-cd3b-46eb-916a-33d0396750ec-JggFtv'
 #Alex's Key
 #secure_key =  '1002abbbeg-42f5aee4-e4d0-4570-a5cf-b31384860e44-Xyzngo'
 
-main(2000,'producer_trace.txt','consumer_trace.txt','filtered_ips.txt',secure_key,probes)
+main(2000,produce_file,consume_file,inpt_file,secure_key)
 #Clear producer and consumer files
 #open('producer.txt', 'w').close()
 #open('consumer.txt', 'w').close()

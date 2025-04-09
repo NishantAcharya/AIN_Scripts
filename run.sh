@@ -25,28 +25,33 @@ for i in "${!libraries[@]}"; do
     lan="${lans[$i]}"
     lon="${lons[$i]}"
     name="${name[$i]// /_}"
+    state="${state[$i]}"
 
     echo "Library: $library"
     echo "Latitude: $lan"
     echo "Longitude: $lon"
     echo "Name: $name"
+    echo "State: $state"
     echo
-
-   #get RDNS
-   #Check if the rdns_info.json exists, only then run
-    if [ ! -f "./Results_$name/rdns_info.json" ]; then
-        python3 ./Fcc_removal_rdns.py ./Results_"$name"/outputs/final_cidrs.txt ./Results_"$name"/rdns_info.json
-    else
-        echo "RDNS info already exists for $name, skipping..."
-    fi
    
    #Filter CIDR
    #Check if filtered_Ips.txt exists, only run if it doesn't
-    if [ ! -f "./Results_$name/filtered_ips.txt" ]; then
-        python3 ./residential_remover.py ./Results_"$name"/rdns_info.json ./Results_"$name"/filtered_ips.txt
+   echo "Checking if filtered_ips.txt exists..."
+    if [ ! -f "./Library_Static_Data/Results_$name/filtered_ips.txt" ]; then
+        python3 ./residential_remover.py ./Library_Static_Data/Results_"$name"/final_cidrs.txt ./Library_Static_Data/Results_"$name"/filtered_ips.txt
     else
         echo "Filtered IPs already exist for $name, skipping..."
     fi
 
+    echo "Checking if vantage point group exists..."
+    if [ ! -f "./Library_Static_Data/Results_$name/grouped_probes.json" ]; then
+        python3 ./vantage_point_selector.py "$name" "$lan" "$lon" "$state"
+    else
+        echo "Grouped probes already exist for $name, skipping..."
+    fi
 
+
+    #Move the producer,consumer,download files to the results directory
+
+    echo
 done

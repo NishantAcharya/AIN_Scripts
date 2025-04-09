@@ -80,33 +80,35 @@ def apply_netmask(ip, mask):
     return str(ipaddress.ip_network(f"{ip}/{mask}", strict=False))
 
 #Read the JSON File and remove the residential IPs, then coagulate under CIDRs and select 1 IP per CIDR
-input_file = sys.argv[1] #Results_{lib_name}/rdns_info.json
-input_file = input_file.replace(" ", "\ ")
+#input_file = sys.argv[1] #Results_{lib_name}/rdns_ifno.json
+#with open(input_file, 'r') as f:
+#    data = json.load(f)
+
+#ips = data['IP']
+#rdns = data['RDNS']
+#cidrs = data['CIDR']
+
+#for i in range(len(rdns)):
+#    for j in range(len(rdns[i])):
+#        if rdns[i][j] is not None and ('residential' in rdns[i][j].lower() or 'res' in rdns[i][j].lower()):
+#            ips[i].remove(ips[i][j])
+#            if len(ips[i]) == 0:
+#                ips.remove(ips[i])
+#                cidrs.remove(cidrs[i])
+
+#cidr_data = {}
+#for i in range(len(ips)):
+#    cidr_data[cidrs[i]] = ips[i]
+
+#mid_path = sys.argv[2] #Results_{lib_name}/filtered_rdns_info.json
+#mid_path = mid_path.replace(" ", "\ ")
+
+#with open(mid_path, 'w') as f:
+#    json.dump(cidr_data, f, indent=4)
+
+input_file = sys.argv[1] #Results_{lib_name}/final_cidrs.txt
 with open(input_file, 'r') as f:
-    data = json.load(f)
-
-ips = data['IP']
-rdns = data['RDNS']
-cidrs = data['CIDR']
-
-for i in range(len(rdns)):
-    for j in range(len(rdns[i])):
-        if rdns[i][j] is not None and ('residential' in rdns[i][j].lower() or 'res' in rdns[i][j].lower()):
-            ips[i].remove(ips[i][j])
-            if len(ips[i]) == 0:
-                ips.remove(ips[i])
-                cidrs.remove(cidrs[i])
-
-cidr_data = {}
-for i in range(len(ips)):
-    cidr_data[cidrs[i]] = ips[i]
-
-mid_path = sys.argv[2] #Results_{lib_name}/filtered_rdns_info.json
-mid_path = mid_path.replace(" ", "\ ")
-
-with open(mid_path, 'w') as f:
-    json.dump(cidr_data, f, indent=4)
-
+    cidrs = [item.strip() for item in f.readlines()]
 
 masked_ips = []
 masked_cidrs = []
@@ -119,13 +121,7 @@ for cidr in cidrs:
 
 for i in tqdm(range(len(masked_cidrs))):
     network = ipaddress.ip_network(masked_cidrs[i])
-    subnet_ips = []
-    for j in range(len(ips)):
-        for ip in ips[j]:
-            if ipaddress.ip_address(ip) in network:
-                subnet_ips.append(ip)
-    masked_ips.append(subnet_ips)
-    
+    masked_ips.append([str(ip) for ip in network.hosts()])
 
 filtered_ips = []
 filtered_cidrs = []
@@ -135,7 +131,7 @@ with open('JSON/updated_hitlist.json', 'r') as f:
     hitlist = json.load(f)
 
 print('Finding Hitlist IPs')
-for i in tqdm(range(len(ips))):
+for i in tqdm(range(len(masked_ips))):
     if len(masked_ips[i]) > 0:
         #If the /26 CIDR is in the updated hitlist, then grab an IP from it
         #If the CIDR is smaller than /26 then run through the list and check if there's an IP match
@@ -169,7 +165,7 @@ for i in tqdm(range(len(ips))):
 
 
 #Name the output file
-output_path = sys.argv[3] #Results_{lib_name}/filtered_ips.txt
+output_path = sys.argv[2] #Results_{lib_name}/filtered_ips.txt
 output_path = output_path.replace(" ", "\ ")       
 with open(output_path, 'w') as f:
     for i in range(len(filtered_ips)):

@@ -32,6 +32,11 @@ import geoip2.database
 import requests
 import sys
 
+#Files
+produce_file = sys.argv[1]
+consume_file = sys.argv[2]
+inpt_file = sys.argv[3]
+
 def read_n_lines_no_newlines(filename, n):
   """
   Reads the first n lines from a file and removes all newline characters ('\n') from each line.
@@ -196,7 +201,7 @@ def main(buffer_size, producer_file, consumer_file, inpt_file,secure_key):
             cidr = values[1]
             if msm == '?1':
               print(f'No suitable hop to hit: {ip}')
-              save_to_file_ping({'Failed':True},msm,ip,cidr)
+              #save_to_file_ping({'Failed':True},msm,ip,cidr)
               #consumed_data[ip] = {'Failed':True}
               with open(consumer_file, 'a') as file:
                     file.write(item + '\n')
@@ -213,7 +218,7 @@ def main(buffer_size, producer_file, consumer_file, inpt_file,secure_key):
                 consumed += 1
             elif status == "No suitable probes" or status == "Failed" or status == "Archived":
                 print(f'Measurement Failed: {ip}')
-                save_to_file_ping({'Failed':True},msm,ip,cidr)
+                #save_to_file_ping({'Failed':True},msm,ip,cidr)
                 #consumed_data[ip] = {'Failed':True}
                 with open(consumer_file, 'a') as file:
                     file.write(item + '\n')
@@ -231,7 +236,7 @@ secure_key =  '1002abbbeg-42f5aee4-e4d0-4570-a5cf-b31384860e44-Xyzngo'
 
 #Change the file names, and put the filtered_ips in the exact folders based on the .sh file
 
-main(2000,'producer_trace.txt','consumer_trace.txt','filtered_ips.txt',secure_key)
+main(2000,produce_file,consume_file,inpt_file,secure_key)
 #Clear producer and consumer files
 #open('producer.txt', 'w').close()
 #open('consumer.txt', 'w').close()

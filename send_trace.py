@@ -31,6 +31,12 @@ import requests
 import sys
 import ipaddress
 
+#Files
+produce_file = sys.argv[1]
+consume_file = sys.argv[2]
+inpt_file = sys.argv[3]
+probes_location = sys.argv[4]
+
 def read_n_lines_no_newlines(filename, n):
   """
   Reads the first n lines from a file and removes all newline characters ('\n') from each line.
@@ -303,4 +309,4 @@ for key in data.keys():
 probes = list(set(probes))
 
 #arg1 --> producer file, arg2 --> consumer file, arg3 --> inpt file
-main(2000,'producer_trace.txt','consumer_trace.txt','filtered_ips.txt',secure_key,probes)
+main(2000,produce_file,consume_file,inpt_file,secure_key,probes)

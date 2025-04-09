@@ -19,7 +19,7 @@ while IFS='-' read -r part1 part2 part3 part4 part5; do
     names+=("$part3")
     state+=("$part4")
     libraries+=("$part5")
-done < ./other_libs.txt
+done < ./Library_data.txt
 
 for i in "${!libraries[@]}"; do
     library="${libraries[$i]}"
@@ -31,6 +31,29 @@ for i in "${!libraries[@]}"; do
     echo "LAN: $lan"
     echo "Longitude: $lon"
     echo "Name: $name"
+
+    # Checking if we have done this library already
+    output_directory="./Library_Static_Data/Results_$name"
+    output_file="./outputs/final_cidrs.txt"
+    all_orgname_file="./outputs/all_orgname.txt"
+    filter_orgname_file="./outputs/providers_orgname.txt"
+    black_org_file="./outputs/after_blacklist_orgname.txt"
+    stat_file="./outputs/statistic.txt"
+
+    # Verify if all files are already in the output directory
+    echo "Checking if Library has been processed..."
+    if [ -d "$output_directory" ] && \
+        [ -e "$output_directory/final_cidrs.txt" ] && \
+        [ -e "$output_directory/all_orgname.txt" ] && \
+        [ -e "$output_directory/after_blacklist_orgname.txt" ] && \
+        [ -e "$output_directory/statistic.txt" ]; then
+         echo "All files are already in $output_directory. Skipping this library."
+         continue
+    fi
+
+
+
+
     # Generate the (cidr, netrange, organization name) tuple, this is the most time-consuming part, usually about 2 hours to run
     if [ -e "./whois_data/cidr.dat" ]; then
         echo "whois database has already existed"
@@ -83,11 +106,6 @@ for i in "${!libraries[@]}"; do
     fi
 
     # Check if the output files exist and move them to the respective directory
-    output_file="./outputs/final_cidrs.txt"
-    all_orgname_file="./outputs/all_orgname.txt"
-    filter_orgname_file="./outputs/providers_orgname.txt"
-    black_org_file="./outputs/after_blacklist_orgname.txt"
-    stat_file="./outputs/statistic.txt"
 
     if [ -e "$output_file" ]; then
         mv "$output_file" ./Library_Static_Data/Results_"$name"/

@@ -138,9 +138,9 @@ def main(lib_geoloc,metro_geolocs):
             metro_dist = str(metro[0]),str(metro[1])
             metro_distance = geodesic(metro_dist, lat_long).miles
             #Aleady got the closest possbile 10 probes in a 45 mile radius
-            if id in close_group.values() or metro_distance > 30:
+            if id in close_group.keys() or metro_distance > 25:
                 continue
-            if len(metro_group) < 40:
+            if len(metro_group) < 20:
                 metro_group[id] = metro_distance
             else:
                 if distance < max(metro_group.values()):
@@ -165,39 +165,39 @@ def main(lib_geoloc,metro_geolocs):
     
     return close_group,metro_group
 #Pobe existence (at least 3 nearby probes) is a factor in library selection
-geolocs = [('42.2450259','-84.7458006'),('44.9731694','-93.243012'),('48.474422','-122.323685'), ('36.909472','-95.963552'), ('32.7784456','-79.93269'), 
-           ('38.9911446','-77.0765288'), ('39.745185','-105.000679'), ('30.237029','-90.91548'),('40.829202','-84.925192'),('40.39101791381836','-111.91393280029297')]
-library_names = ['Stockwell-Mudd Libraries','Elmer L. Andersen Library','Burlington Public Library, WA', 'Iowa Tribe of Oklahoma Public Library, OK', 
-                 'Charleston Library Society, SC', 'Chevy Chase Community Branch Library, MD', 
-                 'Auraria Library, CO', 'River Parishes Community College Library, LA', 'Adams Public Library, IN','Saratoga Springs Public Library, UT']
-states = ['Michigan','Minnesota','Washington', 'Oklahoma', 'South Carolina', 'Maryland', 'Colorado', 'Louisiana', 'Indiana','Utah']
+#geolocs = [('42.2450259','-84.7458006'),('44.9731694','-93.243012'),('48.474422','-122.323685'), ('36.909472','-95.963552'), ('32.7784456','-79.93269'), 
+#           ('38.9911446','-77.0765288'), ('39.745185','-105.000679'), ('30.237029','-90.91548'),('40.829202','-84.925192'),('40.39101791381836','-111.91393280029297')]
+#library_names = ['Stockwell-Mudd Libraries','Elmer L. Andersen Library','Burlington Public Library, WA', 'Iowa Tribe of Oklahoma Public Library, OK', 
+#                 'Charleston Library Society, SC', 'Chevy Chase Community Branch Library, MD', 
+#                 'Auraria Library, CO', 'River Parishes Community College Library, LA', 'Adams Public Library, IN','Saratoga Springs Public Library, UT']
+#states = ['Michigan','Minnesota','Washington', 'Oklahoma', 'South Carolina', 'Maryland', 'Colorado', 'Louisiana', 'Indiana','Utah']
 
+library_name = sys.argv[1]
+lat = sys.argv[2]
+lon = sys.argv[3]
+geoloc = (str(lat), str(lon))
+state = sys.argv[4]
 
+print(f"Processing {library_name}")
+with open('Probe_files/state_geoloc_density.json') as f:
+    try:
+        state_data = json.load(f)[state]
+    except KeyError:
+        print(f"Error: No data for {state}")
 
-for i in range(len(library_names)):
-    library_name = library_names[i]
-    print(f"Processing {library_name}")
-    state = states[i]
-    geoloc = geolocs[i]
-    with open('Probe_files/state_geoloc_density.json') as f:
-        try:
-            state_data = json.load(f)[state]
-        except KeyError:
-            print(f"Error: No data for {state}")
+    metro_geoloc = state_data['top_density_geoloc']
 
-        metro_geoloc = state_data['top_density_geoloc']
+close_group,metro_group = main(geoloc,metro_geoloc)
+print(f"Close Group: {len(close_group)}")
+print(f"Metro Group: {len(metro_group)}")
+data = {'Close':close_group,'Metro':metro_group}
 
-    close_group,metro_group = main(geoloc,metro_geoloc)
-    print(f"Close Group: {len(close_group)}")
-    print(f"Metro Group: {len(metro_group)}")
-    data = {'Close':close_group,'Metro':metro_group}
+#Use this to create a trace vantage selector from an area close to the library and the nearest metropolitan area
+#That is not the current metro(if current is a metropolitan area)
+#Use the CDC data, and find the median population desnity in each city per state, keep a record of all the 
+## cities over the median range of pop density -- get their geolocation
+#Find a probe close to each of these metropolitan areas and 5 closest probes near the city -- make sure no repeat happens
 
-    #Use this to create a trace vantage selector from an area close to the library and the nearest metropolitan area
-    #That is not the current metro(if current is a metropolitan area)
-    #Use the CDC data, and find the median population desnity in each city per state, keep a record of all the 
-    ## cities over the median range of pop density -- get their geolocation
-    #Find a probe close to each of these metropolitan areas and 5 closest probes near the city -- make sure no repeat happens
-
-    #Saving the data
-    with open(f'JSON/grouped_probes_{library_name}.json', 'w') as f:
-        json.dump(data, f, indent=4)
+#Saving the data
+with open(f'./Library_Static_Data/Results_{library_name}/grouped_probes.json', 'w') as f:
+    json.dump(data, f, indent=4)
