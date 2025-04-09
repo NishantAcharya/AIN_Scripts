@@ -5,11 +5,10 @@ from pathlib import Path
 
 
 #input files
-parent_dir = Path(__file__).resolve().parent
-file_name1 = parent_dir  / ".." / "Data_set" / "bulk_whois" / "Organizations.txt"
-file_name2 = parent_dir  / ".." / "Data_set" / "FCC_providers" / "BDC.xlsx"
+file_name1 = "./Data_set/bulk_whois/Organizations.txt"
+file_name2 = "./Data_set/FCC_providers/BDC.xlsx"
 #contains all organization names from Whois and FCC provider names
-output_name = parent_dir  / "nameset.txt"
+output_name = "./nameset.txt"
 
 
 org_name_set = []

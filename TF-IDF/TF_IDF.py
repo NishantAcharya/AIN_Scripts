@@ -14,14 +14,13 @@ abbre_set = ["utopia"]
 #file_name2 = parent_dir  / ".." / "Data_set" / "FCC_providers" / "BDC.xlsx"
 
 #input files
-parent_dir = Path(__file__).resolve().parent
-name_path = Path(__file__).resolve().parent / "nameset.txt"
-idf_path = Path(__file__).resolve().parent / "idf.txt"
-tf_idf_path = Path(__file__).resolve().parent/ "tf_idf.txt"
-provdier_names = Path(__file__).resolve().parent / ".." / "FCC_Provider" / "FCC_providers.txt"
-keywords_file = Path(__file__).resolve().parent/ "provider_keywords.txt"
-keyword_for_every_name = Path(__file__).resolve().parent / ".." / "outputs" / "FCC_providers.txt"
-provider_no_keyword_path = Path(__file__).resolve().parent / ".." / "outputs" / "provider_no_keyword.txt"
+name_path = "./nameset.txt"
+idf_path = "./idf.txt"
+tf_idf_path = "./tf_idf.txt"
+provdier_names = "./FCC_Provider/FCC_providers.txt"
+keywords_file = "./provider_keywords.txt"
+keyword_for_every_name = "./outputs/FCC_providers.txt"
+provider_no_keyword_path = "./outputs/provider_no_keyword.txt"
 
 #This set is manually generated, to make it up-to-date, use extract_special.py to see whether other special chars remains
 remain_char = [chr(38), chr(95), chr(45), chr(42), chr(46), chr(39), chr(96), chr(64), chr(63),chr(43), chr(61), chr(35), chr(58), chr(94), chr(62),  chr(37) , chr(126), chr(92), chr(124), chr(33)]

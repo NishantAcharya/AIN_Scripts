@@ -24,11 +24,11 @@ from pathlib import Path
 #boston_geoloc = (42.349396,-71.078369) #From Google Maps
 #geoloc = (48.474422,-122.323685)
 #geoloc = (34.073620,-118.400352)
-geoloc = (33.705460, -84.461617)
+#geoloc = (33.705460, -84.461617)
 #library_name = 'Atlanta Fulton Public Library System, GA'
 
-csv_file = Path(__file__).resolve().parent / 'CSV/GeoLite2-City-Blocks-IPv4.csv'
-file_name = Path(__file__).resolve().parent / 'cidrs_near_library.txt'
+csv_file = './CSV/GeoLite2-City-Blocks-IPv4.csv'
+file_name = './reverse_geolocation/cidrs_near_library.txt'
 
 ##############
 #Find out all the geoids in the US from US.txt --> https://www.geonames.org/data-sources.html
@@ -87,7 +87,7 @@ ipinfo_25 = []
 #start_ip,end_ip,join_key,city,region,country,latitude,longitude,postal_code,timezone
 
 print('GETTING IPINFO 25 KM CIDRS\n')
-with open(Path(__file__).resolve().parent / 'CSV' / 'standard_location.csv') as f:
+with open('./reverse_geolocation/CSV/standard_location.csv') as f:
     for line in tqdm(f):
         csv_line = line.split(',')
         country = csv_line[5]
@@ -143,7 +143,7 @@ union_set = [str(i) for i in union_set]
 union_set.sort()
 
 
-
+print('Saving CIDRs to file\n')
 with open(file_name,'w') as f:
     for i in union_set:
         f.write(i+'\n')

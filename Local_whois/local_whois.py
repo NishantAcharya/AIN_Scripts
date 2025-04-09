@@ -12,20 +12,20 @@ from pathlib import Path
 
 
 #input files
-input_cidr = Path(__file__).resolve().parent / ".." / "reverse_geolocation" / "cidrs_near_library.txt"
-csv_file = Path(__file__).resolve().parent / ".." / "whois_data" / "cidr_greater_25.csv"
+input_cidr = "./reverse_geolocation/cidrs_near_library.txt"
+csv_file = "./whois_data/cidr_greater_25.csv"
 #small_cidr_csv_file = Path(__file__).resolve().parent / "small_cidr.csv"
-dat_file = Path(__file__).resolve().parent / ".." / "whois_data" / "cidr.dat"
-keyword_file = Path(__file__).resolve().parent / ".." / "TF-IDF" / "provider_keywords.txt"
-black_list_file = Path(__file__).resolve().parent / ".." / "Data_set" / "blacklist.txt"
-state_file = Path(__file__).resolve().parent / ".." / "Data_set" / "states.txt"
+dat_file = "./whois_data/cidr.dat"
+keyword_file = "./TF-IDF/provider_keywords.txt"
+black_list_file = "./Data_set/blacklist.txt"
+state_file = "./Data_set/states.txt"
 
 #output files
-output_file = Path(__file__).resolve().parent / ".." / "outputs" / "final_cidrs.txt"
-all_orgname_file = Path(__file__).resolve().parent / ".." / "outputs" / "all_orgname.txt"
-filter_orgname_file = Path(__file__).resolve().parent / ".." / "outputs" / "providers_orgname.txt"
-black_org_file = Path(__file__).resolve().parent / ".." / "outputs" / "after_blacklist_orgname.txt"
-stat_file = Path(__file__).resolve().parent / ".." / "outputs" / "statistic.txt"
+output_file = "./outputs/final_cidrs.txt"
+all_orgname_file = "./outputs/all_orgname.txt"
+filter_orgname_file = "./outputs/providers_orgname.txt"
+black_org_file = "./outputs/after_blacklist_orgname.txt"
+stat_file = "./outputs/statistic.txt"
 asndb = pyasn.pyasn(str(dat_file))
 
 test_mode = 1

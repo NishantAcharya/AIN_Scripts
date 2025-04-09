@@ -9,11 +9,10 @@ from pathlib import Path
 import re
 
 
-parent_dir = Path(__file__).resolve().parent
-BDC_provider = parent_dir  / ".." / "Data_set" / "FCC_providers" / "BDC.xlsx"
-folder_path = parent_dir  / ".." / "Data_set" / "FCC_providers" 
-output_path = parent_dir  / ".." / "FCC_Provider" / "FCC_providers.txt"
-output_path2 = parent_dir  / ".." / "outputs" / "FCC_providers.txt"
+BDC_provider = "./Data_set/FCC_providers/BDC.xlsx"
+folder_path = "./Data_set/FCC_providers" 
+output_path = "./FCC_Provider/FCC_providers.txt"
+output_path2 = "./outputs/FCC_providers.txt"
 
 providers = []
 fingers = []
@@ -213,7 +212,7 @@ if len(sys.argv) > 1:
     if target_geoid == "0":
         sys.exit(1)
     print("+++++++++++++++++++++++++++++++++++")
-    folder_path = folder_path / state.strip()
+    folder_path = folder_path +'/' + state.strip()
     frn_search(folder_path, target_geoid)
     print("*********************************")
     for i in range(len(providers)):
