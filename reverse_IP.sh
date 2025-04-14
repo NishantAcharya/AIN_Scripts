@@ -8,12 +8,11 @@ names=()
 states=()
 
 # Read from the Library_data.txt file and separate lines on '-'
-while IFS='-' read -r part1 part2 part3 part4 part5; do
-    part1=${part1//\//-}
-    part2=${part2//\//-}
-    part3=${part3//\//-}
-    part4=${part4//\//-}
-    part5=${part5//\//-}
+    part1=${part1//%/~}
+    part2=${part2//%/~}
+    part3=${part3//%/~}
+    part4=${part4//%/~}
+    part5=${part5//%/~}
     lans+=("$part1")
     lons+=("$part2")
     names+=("$part3")
