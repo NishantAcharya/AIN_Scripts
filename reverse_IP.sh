@@ -6,8 +6,10 @@ lans=()
 lons=()
 names=()
 states=()
+echo "Starting the script..."
 
 # Read from the Library_data.txt file and separate lines on '-'
+while IFS='~' read -r part1 part2 part3 part4 part5; do
     part1=${part1//%/~}
     part2=${part2//%/~}
     part3=${part3//%/~}
@@ -61,8 +63,18 @@ for i in "${!libraries[@]}"; do
         python3 ./Local_whois/Netrange_OrgName_pair.py
     fi
     # Get provider names for this library
+    # Run the FCC providers script and handle JSONDecodeError
     python3 ./FCC_Provider/FCC_providers.py "$library"
-    exit_code=$?  
+    exit_code=$?
+
+    #Error handling
+
+    if [ $exit_code -eq 255 ]; then
+        name=$name"_json_decode_error"
+    elif [ $exit_code -eq 254 ]; then
+        name=$name"_parsing_error"
+    fi
+
     # Don't get any FIPS code
     if [ $exit_code -eq 1 ]; then
         echo "No FIPS code found"

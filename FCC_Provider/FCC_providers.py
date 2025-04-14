@@ -147,12 +147,20 @@ def FIPS_lookup(street, city, state, zip):
 if len(sys.argv) > 1:
     address = sys.argv[1]  # Get the first argument (aaaaa)
     add = address.split(', ')
-    street = add[0]
-    city = add[1]
-    state = add[2]
-    zip = add[3]
+    try:
+        street = add[0]
+        city = add[1]
+        state = add[2]
+        zip = add[3]
+    except:
+        print("Error: Please provide the address in the format 'street, city, state, zip'")
+        sys.exit(254)
     match = re.search(r'\d+', street)
-    target_geoid = FIPS_lookup(street,city,state,zip)
+    try:
+        target_geoid = FIPS_lookup(street,city,state,zip)
+    except:
+        print("Error: JSON decode error -- Do a manual Check")
+        sys.exit(255)
     print(f"The FIPS code for {street} is: {target_geoid}")
     '''
     if target_geoid == "0":
