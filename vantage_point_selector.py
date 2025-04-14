@@ -108,6 +108,7 @@ def main(lib_geoloc,metro_geolocs):
     violating_probes = violating_probes_df['ProbeID'].tolist()
 
     #Rewrite this to get the 5 closest probes to the library and the 5 closest probes to the metro area
+    
     for probe in tqdm(data):
         if probe['id'] in violating_probes:
             continue
@@ -143,7 +144,7 @@ def main(lib_geoloc,metro_geolocs):
             metro_dist = str(metro[0]),str(metro[1])
             metro_distance = geodesic(metro_dist, lat_long).miles
             #Aleady got the closest possbile 10 probes in a 45 mile radius
-            if id in close_group.keys() or metro_distance > 25:
+            if id in close_group.keys() or metro_distance > 30:
                 continue
             if len(metro_group) < 20:
                 metro_group[id] = metro_distance

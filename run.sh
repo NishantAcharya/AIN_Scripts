@@ -44,11 +44,11 @@ for i in "${!libraries[@]}"; do
     fi
 
     echo "Checking if vantage point group exists..."
-    if [ ! -f "./Library_Static_Data/Results_$name/grouped_probes.json" ]; then
-        python3 ./vantage_point_selector.py "$name" "$lan" "$lon" "$state"
-    else
-        echo "Grouped probes already exist for $name, skipping..."
-    fi
+    #if [ ! -f "./Library_Static_Data/Results_$name/grouped_probes.json" ]; then
+    python3 ./vantage_point_selector.py "$name" "$lan" "$lon" "$state"
+    #else
+    #    echo "Grouped probes already exist for $name, skipping..."
+    #fi
 
 
     #Move the producer,consumer,download files to the results directory
