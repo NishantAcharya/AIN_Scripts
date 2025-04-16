@@ -1,5 +1,8 @@
 import re
+#Using GPU -- Remove the comment if you want CPU
 from sklearn.feature_extraction.text import TfidfVectorizer
+#Comment the next line if you want to use CPU
+#from cuml.feature_extraction.text import TfidfVectorizer
 import json
 import os
 from pathlib import Path

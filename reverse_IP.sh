@@ -73,6 +73,7 @@ for i in "${!libraries[@]}"; do
         name=$name"_json_decode_error"
     elif [ $exit_code -eq 254 ]; then
         name=$name"_parsing_error"
+        continue
     fi
 
     # Don't get any FIPS code
@@ -84,6 +85,13 @@ for i in "${!libraries[@]}"; do
         python3 ./Local_whois/local_whois_no_providers.py
     # Get FIPS code, but don't get provider in this census block
     elif [ $exit_code -eq 2 ]; then
+        echo "No provider found"
+        echo
+        python3 ./reverse_geolocation/get_cidrs.py "$lan" "$lon"
+        # Do local whois
+        python3 ./Local_whois/local_whois_no_providers.py
+
+    elif [ $exit_code -eq 255 ]; then
         echo "No provider found"
         echo
         python3 ./reverse_geolocation/get_cidrs.py "$lan" "$lon"

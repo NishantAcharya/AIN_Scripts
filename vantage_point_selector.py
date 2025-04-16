@@ -107,8 +107,8 @@ def main(lib_geoloc,metro_geolocs):
     violating_probes_df = pd.read_csv('CSV/violating_probes_paper.csv')
     violating_probes = violating_probes_df['ProbeID'].tolist()
 
-    #Rewrite this to get the 5 closest probes to the library and the 5 closest probes to the metro area
-    
+    #TODO: Adjust this to get he max probe value into consideration
+    #Get the probe and their distances
     for probe in tqdm(data):
         if probe['id'] in violating_probes:
             continue
