@@ -79,7 +79,6 @@ with open(name_path, "r") as file:
     for line in file:
         name = line.strip()
         name = re.sub(r'\.+', '.', name)
-        name_set.append(name)
 name_set = list(set(name_set))
 #for item in name_set:
     #print(item)

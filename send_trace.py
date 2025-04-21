@@ -32,10 +32,10 @@ import sys
 import ipaddress
 
 #Files
-produce_file = sys.argv[1]
-consume_file = sys.argv[2]
-inpt_file = sys.argv[3]
-probes_location = sys.argv[4]
+produce_file = str(sys.argv[1])
+consume_file = str(sys.argv[2])
+inpt_file = str(sys.argv[3])
+probes_location = str(sys.argv[4])
 
 def read_n_lines_no_newlines(filename, n):
   """
@@ -298,7 +298,8 @@ secure_key =  '1002abbbeg-42f5aee4-e4d0-4570-a5cf-b31384860e44-Xyzngo'
 #Redo Probe collection here, only select the unqiue probes
 probes = []
 data = []
-with open('JSON/grouped_probes.json') as f:
+#TODO: Change this to be the probe location
+with open(probes_location) as f:
     data = json.load(f)
 
 for key in data.keys():
@@ -307,6 +308,7 @@ for key in data.keys():
         probes.append(data[key][dist])
 
 probes = list(set(probes))
+print(probes)
 
 #arg1 --> producer file, arg2 --> consumer file, arg3 --> inpt file
-main(2000,produce_file,consume_file,inpt_file,secure_key,probes)
+#main(2000,produce_file,consume_file,inpt_file,secure_key,probes)

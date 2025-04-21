@@ -32,10 +32,10 @@ import sys
 import ipaddress
 
 #Files
-produce_file = sys.argv[1]
-consume_file = sys.argv[2]
-inpt_file = sys.argv[3]
-probes_location = sys.argv[4]
+produce_file = str(sys.argv[1])
+consume_file = str(sys.argv[2])
+inpt_file = str(sys.argv[3])
+probes_location = str(sys.argv[4])
 
 def read_n_lines_no_newlines(filename, n):
   """

@@ -101,7 +101,7 @@ for i in "${!libraries[@]}"; do
         echo "Get FCC providers"
         echo 
         # If the set of organization names and provider names exist, skip this step
-        if [ -e "./TF-IDF/nameset.txt" ]; then
+        if [ -e "./nameset.txt" ]; then
             echo "The nameset file exists"
         else
             echo "Now generating the nameset for TF-IDF"

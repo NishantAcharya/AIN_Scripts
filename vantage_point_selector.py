@@ -95,6 +95,8 @@ def get_file():
 
     return data['objects']
 
+##TODO: Adjust this to get he max probe value into consideration
+#Get the probe and their distances
 def main(lib_geoloc,metro_geolocs):
     if not file_exists():
         data = get_file()
@@ -107,8 +109,7 @@ def main(lib_geoloc,metro_geolocs):
     violating_probes_df = pd.read_csv('CSV/violating_probes_paper.csv')
     violating_probes = violating_probes_df['ProbeID'].tolist()
 
-    #TODO: Adjust this to get he max probe value into consideration
-    #Get the probe and their distances
+    
     for probe in tqdm(data):
         if probe['id'] in violating_probes:
             continue
