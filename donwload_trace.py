@@ -34,8 +34,8 @@ import sys
 import multiprocessing
 
 #Files
-consume_file = sys.argv[1]
-output_file = sys.argv[2] #Remember to create the Folder if it does not exist
+#consume_file = sys.argv[1]
+#output_file = sys.argv[2] #Remember to create the Folder if it does not exist
 
 def read_n_lines_no_newlines(filename, n):
   """
@@ -138,4 +138,6 @@ def save_to_file_ping(data,entry_msm,entry_ip,entry_cidr):
 
 
 def main(consumer_file,download_file):
+    test_msms = [] #Total 10 traces
+    #Dividing the work between 8 processes and downloading the traces -- keep some failed traces and some done traces
     return None

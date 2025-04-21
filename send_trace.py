@@ -297,17 +297,12 @@ secure_key =  '1002abbbeg-42f5aee4-e4d0-4570-a5cf-b31384860e44-Xyzngo'
 #probes = [21003,55451,1009747,10342,1145,52574,53097,55692,1008382,30350]
 #Redo Probe collection here, only select the unqiue probes
 probes = []
-data = []
 #TODO: Change this to be the probe location
 with open(probes_location) as f:
     data = json.load(f)
 
-for key in data.keys():
-    group = data[key]
-    for dist in group.keys():
-        probes.append(data[key][dist])
+probes = list(data['Close'].keys())
 
-probes = list(set(probes))
 print(probes)
 
 #arg1 --> producer file, arg2 --> consumer file, arg3 --> inpt file
