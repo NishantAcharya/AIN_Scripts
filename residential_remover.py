@@ -79,33 +79,6 @@ def apply_netmask(ip, mask):
     """
     return str(ipaddress.ip_network(f"{ip}/{mask}", strict=False))
 
-#Read the JSON File and remove the residential IPs, then coagulate under CIDRs and select 1 IP per CIDR
-#input_file = sys.argv[1] #Results_{lib_name}/rdns_ifno.json
-#with open(input_file, 'r') as f:
-#    data = json.load(f)
-
-#ips = data['IP']
-#rdns = data['RDNS']
-#cidrs = data['CIDR']
-
-#for i in range(len(rdns)):
-#    for j in range(len(rdns[i])):
-#        if rdns[i][j] is not None and ('residential' in rdns[i][j].lower() or 'res' in rdns[i][j].lower()):
-#            ips[i].remove(ips[i][j])
-#            if len(ips[i]) == 0:
-#                ips.remove(ips[i])
-#                cidrs.remove(cidrs[i])
-
-#cidr_data = {}
-#for i in range(len(ips)):
-#    cidr_data[cidrs[i]] = ips[i]
-
-#mid_path = sys.argv[2] #Results_{lib_name}/filtered_rdns_info.json
-#mid_path = mid_path.replace(" ", "\ ")
-
-#with open(mid_path, 'w') as f:
-#    json.dump(cidr_data, f, indent=4)
-
 input_file = sys.argv[1] #Results_{lib_name}/final_cidrs.txt
 with open(input_file, 'r') as f:
     cidrs = [item.strip() for item in f.readlines()]
@@ -123,6 +96,8 @@ for i in tqdm(range(len(masked_cidrs))):
     network = ipaddress.ip_network(masked_cidrs[i])
     masked_ips.append([str(ip) for ip in network.hosts()])
 
+
+
 filtered_ips = []
 filtered_cidrs = []
 
@@ -137,6 +112,7 @@ for i in tqdm(range(len(masked_ips))):
         #If the CIDR is smaller than /26 then run through the list and check if there's an IP match
 
         net_bits = int(masked_cidrs[i].split('/')[1])
+
         if net_bits == 26:
             try:
                 h_ips = hitlist[masked_cidrs[i]]
@@ -150,13 +126,21 @@ for i in tqdm(range(len(masked_ips))):
         else:
             net_ip = masked_cidrs[i].split('/')[0]
             masked = apply_netmask(net_ip, 26)
+
             try:
                 h_ips = hitlist[masked]
+                check = False
                 for ip in masked_ips[i]:
                     if ip in h_ips:
                         filtered_ips.append(ip)
                         filtered_cidrs.append(masked_cidrs[i])
+                        check = True
                         break
+                #There are IPs in a /26 there but not the actual IP we wanted to check
+                if not check:
+                    idx = np.random.randint(0,len(masked_ips[i]))
+                    filtered_ips.append(masked_ips[i][idx])
+                    filtered_cidrs.append(masked_cidrs[i])
             except KeyError:
                 idx = np.random.randint(0,len(masked_ips[i]))
                 filtered_ips.append(masked_ips[i][idx])
@@ -172,3 +156,5 @@ with open(output_path, 'w') as f:
         ip = filtered_ips[i]
         cidr = filtered_cidrs[i]
         f.write(ip +'-'+cidr+ '\n')
+
+

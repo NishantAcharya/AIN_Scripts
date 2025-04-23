@@ -33,6 +33,7 @@ import requests
 import sys
 import multiprocessing
 
+
 #Files
 #consume_file = sys.argv[1]
 #output_file = sys.argv[2] #Remember to create the Folder if it does not exist
@@ -136,8 +137,34 @@ def save_to_file_ping(data,entry_msm,entry_ip,entry_cidr):
       with open(filename, "w+") as outfile: 
           json.dump(just_msms, outfile)
 
+#TODO: Parse out the MSM ID and the directory
+def main(data):
+    """
+    This function will be executed by each process.
+    It receives a single input argument.
+    """
+    # Get the current process name
+    process_name = multiprocessing.current_process().name
 
-def main(consumer_file,download_file):
-    test_msms = [] #Total 10 traces
-    #Dividing the work between 8 processes and downloading the traces -- keep some failed traces and some done traces
-    return None
+
+    print(f"Process {process_name} is processing data: {data}")
+    result = retreive_msm(data)
+    print(result)
+    print(f'-----------------------------------{data}-----------------------------------')
+
+    return result
+
+if __name__ == '__main__':
+    consumer_file = sys.argv[1]
+    download_file = sys.argv[2]
+    # Prepare input data
+    #Read the consumed file every minute after the downloads are done, parse, then run the following script
+    test_msms = [95910674,95492151,95488950,95487386,95486281,84991995] #Total 6 traces
+
+    # Create a Pool with 4 processes
+    with multiprocessing.Pool(processes=8) as pool:
+        # Use pool.map to apply the worker function to each input
+        pool.map(main, test_msms)
+    
+    #Save the read lines to the download file -- because multiple writers can cause issues
+

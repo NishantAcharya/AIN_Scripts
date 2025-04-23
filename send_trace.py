@@ -35,7 +35,6 @@ import ipaddress
 produce_file = str(sys.argv[1])
 consume_file = str(sys.argv[2])
 inpt_file = str(sys.argv[3])
-probes_location = str(sys.argv[4])
 
 def read_n_lines_no_newlines(filename, n):
   """
@@ -150,7 +149,7 @@ def create_trace(probe_ids,ip,key,st,et):
 def create_trace_bulk(probe_ids,ips,key,st,et):
 
   #grabbing all the probe_ids:
-
+###################################################
   probes = ""
   for probe in probe_ids:
       probes+= str(probe)+","
@@ -163,7 +162,7 @@ def create_trace_bulk(probe_ids,ips,key,st,et):
       requested = len(probe_ids),
       tags={"include":["system-ipv4-works"]}
   )
-
+##############################################
   traces_inpt = []
   traces = []
 
@@ -175,7 +174,7 @@ def create_trace_bulk(probe_ids,ips,key,st,et):
         continue
     current_name = ip+'-'+'AIN'
 
-    trace = Traceroute(af=4, target=ip, description=current_name,packets=1,protocol="ICMP")
+    trace = Traceroute(af=4, target=ip, description=current_name,packets=3,protocol="ICMP")
 
     traces_inpt.append(trace)
     traces.append(0)
@@ -198,7 +197,6 @@ def create_trace_bulk(probe_ids,ips,key,st,et):
 
 
   inital_msms = response['measurements']
-  print(response)
   msms = []
   count = 0
   i = 0
@@ -210,13 +208,11 @@ def create_trace_bulk(probe_ids,ips,key,st,et):
       count += 1
 
     i += 1
-  print(msms)
   return msms
     
 
 
-#TODO: Bulk traceroute and saving all the msms one by one
-def main(buffer_size, producer_file, consumer_file, inpt_file,secure_key,prbs):
+def main(buffer_size, producer_file, consumer_file, inpt_file,secure_key):
     print('Starting producer...')
   
     consumed = 0
@@ -262,28 +258,41 @@ def main(buffer_size, producer_file, consumer_file, inpt_file,secure_key,prbs):
         ips = [line.strip().split('-')[0] for line in lines]
         split_key = secure_key.split('-')
         key = '-'.join(split_key[1:-1])
+        #IP-CIDR-DIRECTORY
+        probe_locations = [line.strip().split('-')[2] for line in lines]
 
-        #Change this to not be adaptive and just use 2K requests but 30 minutes in advance
-        #Also adjust the start and the end time here to be 30 minutes in advance
-        #Any susbequent ones get scheduled 10 minutes from current time and end in 30 minutes from current time
-
-        #The start time deviation
-
+        #TODO: Create a Mapping between probe directory and the ip from the above lists
+        probe_dict = {}
+        for i in range(len(probe_locations)):
+          try:
+              temp = probe_dict[probe_locations[i]]
+          except KeyError:
+              probe_dict[probe_locations[i]] = []
+          probe_dict[probe_locations[i]].append(ips[i])
+          
         #There needs to be a check if the measurment is not stopped, as in check status
         start_time = datetime.now(timezone.utc)+timedelta(minutes=3)
         end_time = start_time+timedelta(minutes=8)
         #Creating the measurement -- add end time here   
 
-        #Bulk traceroute
-        msms = create_trace_bulk(prbs,ips,key,start_time,end_time)
-        new_lines = []
-        for i in range(len(ips)):
-          new_line = lines[i] + '-' + str(msms[i]) + '\n'
-          new_lines.append(new_line)
+        for key in probe_dict.keys():
+          #probe location is just the name -- this script should be run from the base directory
+          probe_location = f'./Library_Static_Data/Results_{key}/grouped_probes.json'
+          probes = []
+          with open(probe_location) as f:
+              data = json.load(f)
 
-        #Writing the new lines to the producer file
-        with open(producer_file, 'a') as file:
-          file.writelines(new_lines)
+          prbs = list(data['Close'].keys())
+          #Bulk traceroute
+          msms = create_trace_bulk(prbs,ips,key,start_time,end_time)
+          new_lines = []
+          for i in range(len(ips)):
+            new_line = lines[i] + '-' + str(msms[i]) + '\n' # IP-CIDR-DIRECTORY-MSM
+            new_lines.append(new_line)
+
+          #Writing the new lines to the producer file
+          with open(producer_file, 'a') as file:
+            file.writelines(new_lines)
 
 #My Key
 #secure_key = '1HHbx12-1c3d00e0-cd3b-46eb-916a-33d0396750ec-JggFtv'
@@ -296,14 +305,6 @@ secure_key =  '1002abbbeg-42f5aee4-e4d0-4570-a5cf-b31384860e44-Xyzngo'
 
 #probes = [21003,55451,1009747,10342,1145,52574,53097,55692,1008382,30350]
 #Redo Probe collection here, only select the unqiue probes
-probes = []
-#TODO: Change this to be the probe location
-with open(probes_location) as f:
-    data = json.load(f)
-
-probes = list(data['Close'].keys())
-
-print(probes)
 
 #arg1 --> producer file, arg2 --> consumer file, arg3 --> inpt file
-#main(2000,produce_file,consume_file,inpt_file,secure_key,probes)
+main(2000,produce_file,consume_file,inpt_file,secure_key)

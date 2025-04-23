@@ -95,7 +95,6 @@ def get_file():
 
     return data['objects']
 
-##TODO: Adjust this to get he max probe value into consideration
 #Get the probe and their distances
 def main(lib_geoloc):
     if not file_exists():
@@ -167,11 +166,6 @@ close_group = main(geoloc)
 print(f"Close Group: {len(close_group)}")
 data = {'Close':close_group}
 
-#Use this to create a trace vantage selector from an area close to the library and the nearest metropolitan area
-#That is not the current metro(if current is a metropolitan area)
-#Use the CDC data, and find the median population desnity in each city per state, keep a record of all the 
-## cities over the median range of pop density -- get their geolocation
-#Find a probe close to each of these metropolitan areas and 5 closest probes near the city -- make sure no repeat happens
 
 #Saving the data
 with open(f'./Library_Static_Data/Results_{library_name}/grouped_probes.json', 'w') as f:

@@ -193,11 +193,10 @@ def main(buffer_size, producer_file, consumer_file, inpt_file,secure_key):
       print('Passing through the produced items')
       for item in tqdm(f_lines):
             values = item.split('-')
-            msm = values[2]
+            #IP-CIDR-DIRECTORY-MSM
+            msm = values[3]
+            directory = values[2]
             ip = values[0]
-            #key_ip = values[0]
-            #probe = values[1]
-            #ip = values[2]
             cidr = values[1]
             if msm == '?1':
               print(f'No suitable hop to hit: {ip}')
