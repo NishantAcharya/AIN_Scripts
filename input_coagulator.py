@@ -1,15 +1,39 @@
 import numpy as npy
 import ast
 import os
+from tqdm import tqdm
+import pandas as pd
 
 #Open the library static data as main directory
-
+directory = './Library_Static_Data/'
+input_file = '/home/nishant-acharya/Desktop/Census_collection/CSV/test_data.csv' #---> Sampled 500 libraries
+df = pd.read_csv(input_file)
+input_names = df['Name'].tolist()
+selected_libs  = []
+for name in input_names:
+    name = f"Results_{name.strip().replace(' ','_')}"
+    selected_libs.append(name)
 #Get a list of folders in the directory -- remove any folder that doesnot contain a library from the library_data.txt(500 sub sampled)
-
-#From each folder copy the filtered_ips.txt
-
-#Add the folder path to each entry
+input_folders = []
+for folder in os.listdir(directory):
+    if os.path.isdir(os.path.join(directory, folder)) and folder in selected_libs:
+        input_folders.append(folder)
 
 #Check if input.txt exsists in the current directory, if not create it
+if not os.path.exists('input.txt'):
+    with open('input.txt', 'w') as f:
+        pass
+#From each folder copy the filtered_ips.txt
+inpts = []
+for folder in input_folders:
+    path = os.path.join(directory, folder, 'filtered_ips.txt')
+    if os.path.exists(path):
+        with open(path, 'r') as f:
+            lines = f.readlines()
+            lines = [line.strip()+'-'+str(folder) for line in lines]
+            inpts.extend(lines)
 
-#Append the list to the input.txt file
+with open('input.txt', 'w') as f:
+    for line in tqdm(inpts):
+        f.write(line + '\n')
+            
