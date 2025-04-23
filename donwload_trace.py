@@ -120,7 +120,7 @@ def save_to_file(key_ip,msm,ip,cidr,probe,data):
     with open(filename, "w+") as outfile: 
         json.dump(data, outfile)
 
-def save_to_file_ping(data,entry_msm,entry_ip,entry_cidr):
+def save_to_file_ping(data,entry_msm,entry_ip,entry_cidr,name):
     #Saving the trace                 
       today = date.today()
       date_t = today.strftime("%b-%d-%Y")
@@ -130,7 +130,7 @@ def save_to_file_ping(data,entry_msm,entry_ip,entry_cidr):
       just_msms[entry_ip] = data
   
       #Make sure there is a JSON folder in the same place as this script
-      dirname = "JSON/"+date_t+"/"
+      dirname = f"./Library_Static_Data/{name}/JSON/"+date_t+"/"
   
       os.makedirs(os.path.dirname(dirname), exist_ok=True)
       filename = dirname+ str(entry_msm)+ '-'+str(entry_ip)+'-'+str(entry_cidr).replace('/','?')+".json"
@@ -152,27 +152,44 @@ def main(data):
     #secure_key =  '1002abbbeg-42f5aee4-e4d0-4570-a5cf-b31384860e44-Xyzngo'
 
     #IP-CIDR-DIRECTORY-MSM
-    print(f"Process {process_name} is processing data: {data}")
-    #result = retreive_msm(data)
-    #print(result)
-    print(f'-----------------------------------{data}-----------------------------------')
-
-    return result
+    ip = data.split('-')[0]
+    cidr = data.split('-')[1]
+    directory = data.split('-')[2]
+    msm = data.split('-')[3]
+    print(f"Process {process_name} is processing data: {msm}")
+    result = retreive_msm(msm)
+    print(result)
+    save_to_file_ping(result,msm,ip,cidr,directory)
+    print(f'-----------------------------------{msm}-----------------------------------')
 
 if __name__ == '__main__':
     consumer_file = sys.argv[1]
     download_file = sys.argv[2]
+    input_file = sys.argv[3]
     # Prepare input data
     #Read the consumed file every minute after the downloads are done, parse, then run the following script
-    consumed = read_all_lines_no_newlines(consumer_file)
-    donwloaded = read_all_lines_no_newlines(download_file)
+    dwnlds = count_lines_in_file(download_file)
+    inpt = count_lines_in_file(input_file)
 
-    data = [x for x in consumed if x not in set(donwloaded)]
+    while dwnlds < inpt:
+      if dwnlds == 0:
+        print('No downloads yet')
+        time.sleep(60)
+        dwnlds = count_lines_in_file(download_file)
+        continue
+      consumed = read_all_lines_no_newlines(consumer_file)
+      donwloaded = read_all_lines_no_newlines(download_file)
+      data = [x for x in consumed if x not in set(donwloaded)]
 
-    # Create a Pool with 4 processes
-    with multiprocessing.Pool(processes=8) as pool:
-        # Use pool.map to apply the worker function to each input
-        pool.map(main, data)
-    
-    #Save the read lines to the download file -- because multiple writers can cause issues
+      # Create a Pool with 4 processes
+      with multiprocessing.Pool(processes=8) as pool:
+          # Use pool.map to apply the worker function to each input
+          pool.map(main, data)
+      
+      for item in data:
+        with open(download_file, 'a') as file:
+          file.write(item + '\n')
+        dwnlds += 1
+      
+      #Save the read lines to the download file -- because multiple writers can cause issues
 

@@ -193,6 +193,7 @@ def create_trace_bulk(probe_ids,ips,key,st,et):
       print(len(ips))
       print(len(traces_inpt))
       print(probes)
+      print(key)
       raise Exception("Measurement Not Created, Please check reponse\n \t"+str(response))
 
 
@@ -261,7 +262,6 @@ def main(buffer_size, producer_file, consumer_file, inpt_file,secure_key):
         #IP-CIDR-DIRECTORY
         probe_locations = [line.strip().split('-')[2] for line in lines]
 
-        #TODO: Create a Mapping between probe directory and the ip from the above lists
         probe_dict = {}
         for i in range(len(probe_locations)):
           try:
@@ -275,10 +275,9 @@ def main(buffer_size, producer_file, consumer_file, inpt_file,secure_key):
         end_time = start_time+timedelta(minutes=8)
         #Creating the measurement -- add end time here   
 
-        for key in probe_dict.keys():
+        for name in probe_dict.keys():
           #probe location is just the name -- this script should be run from the base directory
-          probe_location = f'./Library_Static_Data/Results_{key}/grouped_probes.json'
-          probes = []
+          probe_location = f'./Library_Static_Data/{name}/grouped_probes.json'
           with open(probe_location) as f:
               data = json.load(f)
 
@@ -295,13 +294,13 @@ def main(buffer_size, producer_file, consumer_file, inpt_file,secure_key):
             file.writelines(new_lines)
 
 #My Key
-secure_key = '1HHbx12-1c3d00e0-cd3b-46eb-916a-33d0396750ec-JggFtv'
+#secure_key = '1HHbx12-dd8a740b-2855-4e45-9595-e8a4524d8924-JggFtv'
 
 #My other key
 #secure_key = 'oppA12-7e706d8e-8447-49fe-baf5-705d893c5aba-1dcb12'
 
 #Alex's Key
-#secure_key =  '1002abbbeg-42f5aee4-e4d0-4570-a5cf-b31384860e44-Xyzngo'
+secure_key =  '1002abbbeg-42f5aee4-e4d0-4570-a5cf-b31384860e44-Xyzngo'
 
 #probes = [21003,55451,1009747,10342,1145,52574,53097,55692,1008382,30350]
 #Redo Probe collection here, only select the unqiue probes
