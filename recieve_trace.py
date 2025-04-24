@@ -238,7 +238,7 @@ secure_key =  '1002abbbeg-42f5aee4-e4d0-4570-a5cf-b31384860e44-Xyzngo'
 
 #Change the file names, and put the filtered_ips in the exact folders based on the .sh file
 
-main(2000,produce_file,consume_file,inpt_file,secure_key)
+main(100,produce_file,consume_file,inpt_file,secure_key)
 #Clear producer and consumer files
 #open('producer.txt', 'w').close()
 #open('consumer.txt', 'w').close()

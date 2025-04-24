@@ -30,6 +30,7 @@ for folder in input_folders:
     if os.path.exists(path):
         with open(path, 'r') as f:
             lines = f.readlines()
+            folder.replace('-','~')
             lines = [line.strip()+'-'+str(folder) for line in lines]
             inpts.extend(lines)
 

@@ -213,7 +213,7 @@ def create_trace_bulk(probe_ids,ips,key,st,et):
     
 
 
-def main(buffer_size, producer_file, consumer_file, inpt_file,secure_key):
+def main(max_buffer_size, producer_file, consumer_file, inpt_file,secure_key):
     print('Starting producer...')
   
     consumed = 0
@@ -234,7 +234,12 @@ def main(buffer_size, producer_file, consumer_file, inpt_file,secure_key):
 
     #Current File line
     current_line = count_lines_in_file(producer_file) + 1
+    buffer_size = 0
     while produced < inpts:
+        #Slow start
+        buffer_size += max_buffer_size//10
+        if buffer_size > max_buffer_size:
+            buffer_size = max_buffer_size
         if not os.path.exists(consumer_file):
           print(f"Warning: File '{consumer_file}' not found. Producer to assumer 0 consumed")
         else:
@@ -278,14 +283,15 @@ def main(buffer_size, producer_file, consumer_file, inpt_file,secure_key):
         for name in probe_dict.keys():
           #probe location is just the name -- this script should be run from the base directory
           probe_location = f'./Library_Static_Data/{name}/grouped_probes.json'
+          ad_ips = probe_dict[name]
           with open(probe_location) as f:
               data = json.load(f)
 
           prbs = list(data['Close'].keys())
           #Bulk traceroute
-          msms = create_trace_bulk(prbs,ips,key,start_time,end_time)
+          msms = create_trace_bulk(prbs,ad_ips,key,start_time,end_time)
           new_lines = []
-          for i in range(len(ips)):
+          for i in range(len(ad_ips)):
             new_line = lines[i] + '-' + str(msms[i]) + '\n' # IP-CIDR-DIRECTORY-MSM
             new_lines.append(new_line)
 
@@ -294,16 +300,17 @@ def main(buffer_size, producer_file, consumer_file, inpt_file,secure_key):
             file.writelines(new_lines)
 
 #My Key
-#secure_key = '1HHbx12-dd8a740b-2855-4e45-9595-e8a4524d8924-JggFtv'
+secure_key = '1HHbx12-dd8a740b-2855-4e45-9595-e8a4524d8924-JggFtv'
 
 #My other key
 #secure_key = 'oppA12-7e706d8e-8447-49fe-baf5-705d893c5aba-1dcb12'
 
 #Alex's Key
-secure_key =  '1002abbbeg-42f5aee4-e4d0-4570-a5cf-b31384860e44-Xyzngo'
+#secure_key =  '1002abbbeg-42f5aee4-e4d0-4570-a5cf-b31384860e44-Xyzngo'
 
 #probes = [21003,55451,1009747,10342,1145,52574,53097,55692,1008382,30350]
 #Redo Probe collection here, only select the unqiue probes
 
 #arg1 --> producer file, arg2 --> consumer file, arg3 --> inpt file
-main(2000,produce_file,consume_file,inpt_file,secure_key)
+#Use 1000 as buffer size
+main(100,produce_file,consume_file,inpt_file,secure_key)

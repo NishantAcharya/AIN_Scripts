@@ -6,6 +6,7 @@ import os
 import json
 from tqdm import tqdm
 import ipaddress
+import statistics
 
 def get_all_files_in_folder(folder_path):
   """
@@ -76,7 +77,7 @@ def read_traceroute(folder_names, dest_file):
 
             #Getting the traceroutes and last_hop_ip per prb
             for item in temp[ip]:
-                prb_item = {'Traceroute':[], 'Last_Hop_IP':None, 'Dest_Replied':False, 'RTTs':[]}
+                prb_item = {'Traceroute':[], 'Last_Hop_IP':[], 'Dest_Replied':False, 'RTTs':[]}
                 prb_item['Dest_Replied'] = item['destination_ip_responded']
                 traceroute_full = item['result']
                 last_hop_ip = item['src_addr'] #Start with the source address
@@ -91,33 +92,60 @@ def read_traceroute(folder_names, dest_file):
                    ip_data[item['prb_id']] = prb_item
                    continue
                   
+                #for hop in traceroute_full:
+                #    try:
+                #        hop_ip = hop['result'][0]['from'] #Single ping traceroute, for more scan the full list
+                #        if not ipaddress.ip_address(hop_ip).is_private:
+                #            last_hop_ip = hop_ip
+                #    except KeyError:
+                #        hop_ip = '*'
 
-                for hop in traceroute_full:
-                    try:
-                        hop_ip = hop['result'][0]['from'] #Single ping traceroute, for more scan the full list
-                        if not ipaddress.ip_address(hop_ip).is_private:
-                            last_hop_ip = hop_ip
-                    except KeyError:
-                        hop_ip = '*'
-
-                    try:
-                        rtt = hop['result'][0]['rtt']
-                    except KeyError:
-                        rtt = '*'
+                #    try:
+                #        rtt = hop['result'][0]['rtt']
+                #    except KeyError:
+                #        rtt = '*'
                         
 
-                    prb_item['Traceroute'].append(hop_ip)
-                    prb_item['RTTs'].append(rtt)
+                #    prb_item['Traceroute'].append(hop_ip)
+                #    prb_item['RTTs'].append(rtt)
                 
-                prb_item['Last_Hop_IP'] = last_hop_ip
+                #prb_item['Last_Hop_IP'] = last_hop_ip
             
-                ip_data[item['prb_id']] = prb_item
+                #ip_data[item['prb_id']] = prb_item
 
                 #Adding the file lines
+                #data_lines.append(f'{ip}-{item["prb_id"]}-{last_hop_ip}-{cidr.replace("?","/").split(".json")[0]}')
+
+                #Getting the number of packets
+                num_pkts = len(traceroute_full[0]['result'][0]) # Assuming the set of pkts to go out
+                for i in range(0,num_pkts-1):
+                  traces = []
+                  rtts = []
+                  lhp = last_hop_ip
+                  for hop in traceroute_full:
+                      try:
+                          hop_ip = hop['result'][i]['from'] #Single ping traceroute, for more scan the full list
+                          if not ipaddress.ip_address(hop_ip).is_private:
+                              lhp = hop_ip
+                      except KeyError:
+                          hop_ip = '*'
+                      except IndexError:
+                         print(hop['result'])
+                         print(i)
+                         raise
+                      try:
+                          rtt = hop['result'][i]['rtt']
+                      except KeyError:
+                          rtt = '*'
+                      traces.append(hop_ip)
+                      rtts.append(rtt)
+                  
+                  prb_item['Last_Hop_IP'].append(lhp)
+                  prb_item['Traceroute'].append(traces)
+                  prb_item['RTTs'].append(rtts)
+                ip_data[item['prb_id']] = prb_item
                 data_lines.append(f'{ip}-{item["prb_id"]}-{last_hop_ip}-{cidr.replace("?","/").split(".json")[0]}')
-
-
-            
+                      
             data[ip] = ip_data
             data_count += 1
     write_lines_to_file(dest_file, data_lines)
@@ -130,13 +158,91 @@ def read_traceroute(folder_names, dest_file):
     return data
 
 def main():
-    folder_names = ['JSON/Feb-26-2025_fixed']
-    dest_file = 'ping_inpt.txt'
-    data = read_traceroute(folder_names, dest_file)
-    #In Future need a way to keep track of the library name
-    with open('Trace_data/Burlington-Test.json', 'w') as f:
-        json.dump(data, f, indent=4)
+    #folder_names = ['JSON/Feb-26-2025_fixed']
+    #dest_file = 'ping_inpt.txt'
+    directory = './Library_Static_Data/'
+    folders = os.listdir(directory)
+    for folder in folders:
+      current_path = os.path.join(directory, folder)
+      json_path = os.path.join(current_path, 'JSON')
+      #check if Json path exists
+      if not os.path.exists(json_path):
+          continue
+      folder_names = os.listdir(json_path)
+      folder_names = [os.path.join(json_path, folder) for folder in folder_names]
+      dest_file = os.path.join(current_path, 'meta.txt')
+      data = read_traceroute(folder_names, dest_file)
+      dest_folder = os.path.join(current_path, 'Trace_data.json')
+      #Check if the folder exists
+      with open(dest_folder, 'w') as f:
+          json.dump(data, f, indent=4)
 
+      #Checking last mile latencies
+      rtt_vals = {}
+      for ip in data.keys():
+        current_data = data[ip]
+        if current_data['Failed']:
+              continue
+        rtt_vals[ip] = {}
+        for item in current_data.keys():
+           if type(item) == int:
+              prb = current_data[item]
+              rtt_vals[ip][item] = {'last_hop': None, 'last_rtt': None, 'second_last_hop': None, 'second_last_rtt': None,'lat_long':None,'min_rtt_devation':None,'min_rtt':None,'min_rtt_hop':None}
+              traces = prb['Traceroute']
+              rtts = prb['RTTs']
+              last_hop = None
+              last_rtt = None
+              second_last_hop = None
+              second_last_rtt = None
+              std_devs = []
+              for rtt_list in rtts:
+                 sanitized_list = [item for item in rtt_list if item != '*']
+                 dev = statistics.pstdev(sanitized_list)
+                 std_devs.append(dev)
+              rtt_vals[ip][item]['min_rtt_devation'] = min(std_devs)
+              #Getting Min values
+              for k in range(len(traces)):
+                trace = traces[k]
+                rts = rtts[k]
+                for i in range(len(trace)-1,-1,-1):
+                  if trace[i] != '*':
+                      if last_hop is None:
+                        last_hop = trace[i]
+                        last_rtt = rts[i]
+                        second_last_hop = trace[i-1]
+                        second_last_rtt = rts[i-1]
+                      else:
+                         if last_rtt > rts[i]:
+                            last_hop = trace[i]
+                            last_rtt = rts[i]
+                            second_last_hop = trace[i-1]
+                            second_last_rtt = rts[i-1]
+                      break
+              
+              rtt_vals[ip][item]['last_hop'] = last_hop
+              rtt_vals[ip][item]['last_rtt'] = last_rtt
+              rtt_vals[ip][item]['second_last_hop'] = second_last_hop
+              rtt_vals[ip][item]['second_last_rtt'] = second_last_rtt
+
+              if last_rtt - second_last_rtt > min(std_devs):
+                  rtt_vals[ip][item]['min_rtt'] = second_last_rtt
+                  rtt_vals[ip][item]['min_rtt_hop'] = second_last_hop
+              else:
+                  rtt_vals[ip][item]['min_rtt'] = last_rtt
+                  rtt_vals[ip][item]['min_rtt_hop'] = last_hop
+
+              probe_folder = os.path.join(current_path, 'grouped_probes.json')
+              with open(probe_folder) as f:
+                  probe_data = json.load(f)
+
+              lat_long = probe_data['Close'][str(item)][1]
+              rtt_vals[ip][item]['lat_long'] = lat_long
+      
+      #Saving the RTT info
+      rtt_file = os.path.join(current_path, 'rtt_vals.json')
+      with open(rtt_file, 'w') as f:
+          json.dump(rtt_vals, f, indent=4)
+      
 
 main()
 
