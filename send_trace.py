@@ -74,7 +74,8 @@ def read_n_lines_from_line(filename, start_line, n):
       f_lines = file.readlines()
       lines = [line.strip() for line in f_lines]
       if start_line < 1 or start_line > len(lines):
-        raise ValueError(f"Invalid start line: {start_line}")
+        print("No more items left : Stopping...")
+        exit(0)
       end_line = min(start_line + n - 1, len(lines))
       return lines[start_line - 1:end_line]
   except FileNotFoundError:
@@ -146,7 +147,7 @@ def create_trace(probe_ids,ip,key,st,et):
     return response['measurements'][0]
 
 
-def create_trace_bulk(probe_ids,ips,key,st,et):
+def create_trace_bulk(probe_ids,ips,key):
 
   #grabbing all the probe_ids:
 ###################################################
@@ -174,11 +175,13 @@ def create_trace_bulk(probe_ids,ips,key,st,et):
         continue
     current_name = ip+'-'+'AIN'
 
-    trace = Traceroute(af=4, target=ip, description=current_name,packets=3,protocol="ICMP")
+    trace = Traceroute(af=4, target=ip, description=current_name,packets=1,protocol="ICMP")
 
     traces_inpt.append(trace)
     traces.append(0)
 
+  st = datetime.now(timezone.utc)+timedelta(minutes=1)
+  et = datetime.now(timezone.utc)+timedelta(minutes=11)
   atlas_request = AtlasCreateRequest(
       start_time=st,
       stop_time=et,
@@ -234,12 +237,8 @@ def main(max_buffer_size, producer_file, consumer_file, inpt_file,secure_key):
 
     #Current File line
     current_line = count_lines_in_file(producer_file) + 1
-    buffer_size = 0
+    buffer_size = max_buffer_size
     while produced < inpts:
-        #Slow start
-        buffer_size += max_buffer_size//10
-        if buffer_size > max_buffer_size:
-            buffer_size = max_buffer_size
         if not os.path.exists(consumer_file):
           print(f"Warning: File '{consumer_file}' not found. Producer to assumer 0 consumed")
         else:
@@ -274,11 +273,7 @@ def main(max_buffer_size, producer_file, consumer_file, inpt_file,secure_key):
           except KeyError:
               probe_dict[probe_locations[i]] = []
           probe_dict[probe_locations[i]].append(ips[i])
-          
-        #There needs to be a check if the measurment is not stopped, as in check status
-        start_time = datetime.now(timezone.utc)+timedelta(minutes=3)
-        end_time = start_time+timedelta(minutes=8)
-        #Creating the measurement -- add end time here   
+           
 
         for name in probe_dict.keys():
           #probe location is just the name -- this script should be run from the base directory
@@ -287,9 +282,28 @@ def main(max_buffer_size, producer_file, consumer_file, inpt_file,secure_key):
           with open(probe_location) as f:
               data = json.load(f)
 
-          prbs = list(data['Close'].keys())
+          key1 = list(data['Close'].keys())
+          key2 = list(data['Metro'].keys())
+          prbs = []
+          prbs.extend(key1)
+          prbs.extend(key2)
+
+          
+          #Creating the measurement -- add end time here  
+
           #Bulk traceroute
-          msms = create_trace_bulk(prbs,ad_ips,key,start_time,end_time)
+          msms = []
+          CHUNK_SIZE = 1
+          SLEEP_TIME = 1.2 #50 measurements in 1 minute
+          #Dividing into smaller chunks
+          for i in range(0, len(ad_ips), CHUNK_SIZE):
+            chunk = ad_ips[i:i + CHUNK_SIZE]
+            #There needs to be a check if the measument is not stopped, as in check status
+            
+            inter_msm = create_trace_bulk(prbs,chunk,key)
+            msms.extend(inter_msm)
+            #Waiting to make sure the measurement doesn't get overloaded
+            time.sleep(SLEEP_TIME)
           new_lines = []
           for i in range(len(ad_ips)):
             new_line = lines[i] + '-' + str(msms[i]) + '\n' # IP-CIDR-DIRECTORY-MSM
@@ -300,13 +314,16 @@ def main(max_buffer_size, producer_file, consumer_file, inpt_file,secure_key):
             file.writelines(new_lines)
 
 #My Key
-secure_key = '1HHbx12-dd8a740b-2855-4e45-9595-e8a4524d8924-JggFtv'
+#secure_key = '1HHbx12-dd8a740b-2855-4e45-9595-e8a4524d8924-JggFtv'
 
 #My other key
 #secure_key = 'oppA12-7e706d8e-8447-49fe-baf5-705d893c5aba-1dcb12'
 
 #Alex's Key
 #secure_key =  '1002abbbeg-42f5aee4-e4d0-4570-a5cf-b31384860e44-Xyzngo'
+
+#Vijeth Key
+secure_key = 'jj8080-7cb0bc87-417b-44c7-9e53-ed4c50972003-1bd34'
 
 #probes = [21003,55451,1009747,10342,1145,52574,53097,55692,1008382,30350]
 #Redo Probe collection here, only select the unqiue probes

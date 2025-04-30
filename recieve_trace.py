@@ -231,10 +231,10 @@ def main(buffer_size, producer_file, consumer_file, inpt_file,secure_key):
          break
       time.sleep(540)
 #My Key
-#secure_key = '1HHbx12-dd8a740b-2855-4e45-9595-e8a4524d8924-JggFtv'
+secure_key = '1HHbx12-dd8a740b-2855-4e45-9595-e8a4524d8924-JggFtv'
 
 #Alex's Key
-secure_key =  '1002abbbeg-42f5aee4-e4d0-4570-a5cf-b31384860e44-Xyzngo'
+#secure_key =  '1002abbbeg-42f5aee4-e4d0-4570-a5cf-b31384860e44-Xyzngo'
 
 #Change the file names, and put the filtered_ips in the exact folders based on the .sh file
 

@@ -25,6 +25,7 @@ for i in "${!libraries[@]}"; do
     lan="${lans[$i]}"
     lon="${lons[$i]}"
     name="${names[$i]// /_}"
+    name="${name//\//?}"
     state="${state[$i]}"
     echo "Library: $library"
     echo "Latitude: $lan"
@@ -35,8 +36,8 @@ for i in "${!libraries[@]}"; do
 
     #Filter CIDR
     #Check if filtered_Ips.txt exists, only run if it doesn't
-    echo "Getting filtered IPs..."
-    python3 ./residential_remover.py ./Library_Static_Data/Results_"$name"/final_cidrs.txt ./Library_Static_Data/Results_"$name"/filtered_ips.txt
+    #echo "Getting filtered IPs..."
+    #python3 ./residential_remover.py ./Library_Static_Data/Results_"$name"/final_cidrs.txt ./Library_Static_Data/Results_"$name"/filtered_ips.txt ./Library_Static_Data/Results_"$name"/hitlist_count.txt
     #Read the final_cidr.text file based on the correct directory and then add the directory name to the file, after the CIDR
     #Then add the data to common inpt.txt file in the root folder
 

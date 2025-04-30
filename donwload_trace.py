@@ -170,13 +170,9 @@ if __name__ == '__main__':
     #Read the consumed file every minute after the downloads are done, parse, then run the following script
     dwnlds = count_lines_in_file(download_file)
     inpt = count_lines_in_file(input_file)
+    cnsms = count_lines_in_file(consumer_file)
 
     while dwnlds < inpt:
-      if dwnlds == 0:
-        print('No downloads yet')
-        time.sleep(60)
-        dwnlds = count_lines_in_file(download_file)
-        continue
       consumed = read_all_lines_no_newlines(consumer_file)
       donwloaded = read_all_lines_no_newlines(download_file)
       data = [x for x in consumed if x not in set(donwloaded)]

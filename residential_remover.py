@@ -100,6 +100,7 @@ for i in tqdm(range(len(masked_cidrs))):
 
 filtered_ips = []
 filtered_cidrs = []
+hitlist_count = 0
 
 #Loading hitlists
 with open('JSON/updated_hitlist.json', 'r') as f:
@@ -135,6 +136,7 @@ for i in tqdm(range(len(masked_ips))):
                         filtered_ips.append(ip)
                         filtered_cidrs.append(masked_cidrs[i])
                         check = True
+                        hitlist_count += 1
                         break
                 #There are IPs in a /26 there but not the actual IP we wanted to check
                 if not check:
@@ -156,5 +158,11 @@ with open(output_path, 'w') as f:
         ip = filtered_ips[i]
         cidr = filtered_cidrs[i]
         f.write(ip +'-'+cidr+ '\n')
+
+#Saving the hitlist count
+stat_path = sys.argv[3] #Results_{lib_name}/hitlist_count.txt
+with open(stat_path, 'w') as f:
+    f.write(str(hitlist_count))
+
 
 

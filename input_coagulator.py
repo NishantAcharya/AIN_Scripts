@@ -6,13 +6,35 @@ import pandas as pd
 
 #Open the library static data as main directory
 directory = './Library_Static_Data/'
-input_file = '/home/nishant-acharya/Desktop/Census_collection/CSV/test_data.csv' #---> Sampled 500 libraries
+input_file = '/home/nishant-acharya/Desktop/Census_collection/CSV/sub_sampled_data.csv' #---> Sampled 500 libraries
 df = pd.read_csv(input_file)
 input_names = df['Name'].tolist()
+input_cidr_len = df['CIDR'].tolist()
 selected_libs  = []
-for name in input_names:
+selected_cidrs = []
+#MANUALLY UPDATE THIS SECTION for the numeber and type of libraries
+#current_count = 25
+current_high_cidr = 2000
+current_low_cidr = 1000
+Max_count = 50000
+#######
+current_cidr_count = 0
+for i in range(len(input_names)):
+    name = input_names[i]
+    num_cidrs = input_cidr_len[i]
+
+    if num_cidrs > current_high_cidr or num_cidrs < current_low_cidr:
+        continue
+
     name = f"Results_{name.strip().replace(' ','_')}"
     selected_libs.append(name)
+    #######
+    if current_cidr_count + num_cidrs >= Max_count:
+        print(f"Reached the limit of {Max_count} CIDRs")
+        print(f"Total Selected Libraries: {len(selected_libs)}")
+        break
+    current_cidr_count += num_cidrs
+    #######
 #Get a list of folders in the directory -- remove any folder that doesnot contain a library from the library_data.txt(500 sub sampled)
 input_folders = []
 for folder in os.listdir(directory):
@@ -33,6 +55,7 @@ for folder in input_folders:
             folder.replace('-','~')
             lines = [line.strip()+'-'+str(folder) for line in lines]
             inpts.extend(lines)
+
 
 with open('input.txt', 'w') as f:
     for line in tqdm(inpts):
