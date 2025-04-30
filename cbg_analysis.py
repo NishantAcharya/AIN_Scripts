@@ -1,5 +1,7 @@
 import math
 
+#Convert to cartesian/ address the spherical nature of the earth before using this
+
 def find_circle_intersection(circle1, circle2):
     x1, y1, r1 = circle1
     x2, y2, r2 = circle2
@@ -42,9 +44,41 @@ def find_all_intersections(circles):
 
     return intersections
 
+def group_points_by_circle(points, circles):
+    grouped_points = {i: [] for i in range(len(circles))}
+
+    for point in points:
+        px, py = point
+        for i, circle in enumerate(circles):
+            cx, cy, r = circle
+            # Check if the point is inside the circle
+            if math.sqrt((px - cx)**2 + (py - cy)**2) <= r:
+                grouped_points[i].append(point)
+
+    return grouped_points
+
 circle1 = (0,0,2)
 circle2 = (3,0,2)
 circle3 = (1.5,2,2)
 circles = [circle1, circle2, circle3]
 
-print(find_all_intersections(circles))
+intersections = find_all_intersections(circles)
+print(len(intersections))
+print('######################')
+groups = group_points_by_circle(intersections, circles)
+print([len(groups[i]) for i in range(len(groups))])
+print('######################')
+groups = [set(groups[i]) for i in range(len(groups))]
+itsn = groups[0]
+#TODO: Find all different interesections of the given points
+#TODO: Find the polygon of the intersection points
+##Find the center point of this polygon and it's area
+#TODO: If this is a line, then this means only two circles intersect, find it's middle point and the distance from
+##Both the circle boundaries
+#TODO: Check if target is in this shape -- if not 0 points
+#TODO: check how small the area is and how far the center point is from the target --  this for boundary cases
+## As if there are two intersecting circles, then we have violated the previous step
+for i in range(len(groups)):
+    itsn = itsn.intersection(groups[i])
+
+print(itsn)
