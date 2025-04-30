@@ -50,6 +50,6 @@ secure_key = '1002abbbeg-42f5aee4-e4d0-4570-a5cf-b31384860e44-Xyzngo'
 start_ip = 99349373
 end_ip = 99350661
 
-for i in range(start_ip, end_ip):
+for i in range(end_ip,end_ip+1):
     stop__measurement(i,secure_key)
     time.sleep(1)

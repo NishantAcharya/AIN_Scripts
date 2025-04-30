@@ -276,6 +276,7 @@ print(f"Metro Group: {len(metro_group)}")
 data['Metro'] = metro_group
 
 #Saving the data -- will rewrite the file
+#TODO: Save the date of the probe selection!!
 with open(f'./Library_Static_Data/Results_{library_name}/grouped_probes.json', 'w') as f:
     json.dump(data, f, indent=4)
 
