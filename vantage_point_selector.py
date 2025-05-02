@@ -21,6 +21,14 @@ def file_exists():
     year = today.year
     month = today.month
     day = today.day-1
+
+    if int(day) <= 0:
+        day = 28
+        month = today.month-1
+        if month <= 0:
+            month = 12
+            year = today.year-1
+
     if int(day) < 10:
         str_day = '0'+str(day)
     else:
@@ -40,10 +48,19 @@ def load_file():
     year = today.year
     month = today.month
     day = today.day-1
+
+    if int(day) <= 0:
+        day = 28
+        month = today.month-1
+        if month <= 0:
+            month = 12
+            year = today.year-1
+
     if int(day) < 10:
         str_day = '0'+str(day)
     else:
         str_day = str(day)
+    
     if int(month) < 10:
         str_month = '0'+str(month)
     else:

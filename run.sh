@@ -18,7 +18,7 @@ while IFS='~' read -r part1 part2 part3 part4 part5; do
     names+=("$part3")
     state+=("$part4")
     libraries+=("$part5")
-done < ./other_libs.txt
+done < ./validation_libraries.txt
 # Get the CDIRs from all the folders
 for i in "${!libraries[@]}"; do
     library="${libraries[$i]}"
@@ -37,7 +37,7 @@ for i in "${!libraries[@]}"; do
     #Filter CIDR
     #Check if filtered_Ips.txt exists, only run if it doesn't
     #echo "Getting filtered IPs..."
-    #python3 ./residential_remover.py ./Library_Static_Data/Results_"$name"/final_cidrs.txt ./Library_Static_Data/Results_"$name"/filtered_ips.txt ./Library_Static_Data/Results_"$name"/hitlist_count.txt
+    python3 ./residential_remover.py ./Library_Static_Data/Results_"$name"/final_cidrs.txt ./Library_Static_Data/Results_"$name"/filtered_ips.txt ./Library_Static_Data/Results_"$name"/hitlist_count.txt
     #Read the final_cidr.text file based on the correct directory and then add the directory name to the file, after the CIDR
     #Then add the data to common inpt.txt file in the root folder
 

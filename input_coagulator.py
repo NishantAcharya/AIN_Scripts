@@ -47,10 +47,6 @@ for folder in os.listdir(directory):
     if os.path.isdir(os.path.join(directory, folder)) and folder in selected_libs:
         input_folders.append(folder)
 
-#Check if input.txt exsists in the current directory, if not create it
-if not os.path.exists('input_alex.txt'):
-    with open('input_alex.txt', 'w') as f:
-        pass
 #From each folder copy the filtered_ips.txt
 inpts = []
 for folder in input_folders:
@@ -88,10 +84,12 @@ with open('Selected_libraries_alex.txt', 'r') as f:
 #######
 current_cidr_count = 0
 for i in range(len(input_names)):
-    if name in selected_libs_alex:
-        continue
+
     name = input_names[i]
     num_cidrs = input_cidr_len[i]
+    if name in selected_libs_alex:
+        print(name)
+        continue
 
     if num_cidrs > current_high_cidr or num_cidrs < current_low_cidr:
         continue
@@ -117,10 +115,6 @@ for folder in os.listdir(directory):
     if os.path.isdir(os.path.join(directory, folder)) and folder in selected_libs:
         input_folders.append(folder)
 
-#Check if input.txt exsists in the current directory, if not create it
-if not os.path.exists('input.txt'):
-    with open('input.txt', 'w') as f:
-        pass
 #From each folder copy the filtered_ips.txt
 inpts = []
 for folder in input_folders:

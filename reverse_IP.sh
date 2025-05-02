@@ -20,7 +20,7 @@ while IFS='~' read -r part1 part2 part3 part4 part5; do
     names+=("$part3")
     state+=("$part4")
     libraries+=("$part5")
-done < ./other_libs.txt
+done < ./validation_libraries.txt
 
 for i in "${!libraries[@]}"; do
     library="${libraries[$i]}"
