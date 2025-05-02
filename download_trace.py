@@ -166,6 +166,21 @@ if __name__ == '__main__':
     consumer_file = sys.argv[1]
     download_file = sys.argv[2]
     input_file = sys.argv[3]
+    producer_file = sys.argv[4]
+
+    # Check if the download file exists, if not create it
+    if not os.path.exists(download_file):
+      print(f"WARNING: File '{download_file}' does not exist. Creating it.")
+      with open(download_file, 'w') as file:
+        pass  # Create an empty file
+
+    if not os.path.exists(consumer_file):
+      print(f"WARNING: File '{consumer_file}' does not exist. Creating it.")
+      with open(consumer_file, 'w') as file:
+        pass
+
+    if not os.path.exists(input_file):
+      raise FileNotFoundError(f"File '{input_file}' does not exist. Please provide a valid file.")
     # Prepare input data
     #Read the consumed file every minute after the downloads are done, parse, then run the following script
     dwnlds = count_lines_in_file(download_file)
@@ -176,6 +191,10 @@ if __name__ == '__main__':
       consumed = read_all_lines_no_newlines(consumer_file)
       donwloaded = read_all_lines_no_newlines(download_file)
       data = [x for x in consumed if x not in set(donwloaded)]
+      if len(data) <= 0:
+        print(f"Nothing to consume, Sleeping")
+        time.sleep(400)
+        continue
 
       # Create a Pool with 4 processes
       with multiprocessing.Pool(processes=8) as pool:
@@ -188,4 +207,23 @@ if __name__ == '__main__':
         dwnlds += 1
       
       #Save the read lines to the download file -- because multiple writers can cause issues
+
+
+    today_date = date.today().strftime("%Y-%m-%d")
+    past_meta_dir = "./past_meta_files/"
+    os.makedirs(past_meta_dir, exist_ok=True)
+
+    # Define new file paths with today's date
+    new_download_file = os.path.join(past_meta_dir, f"download_file_{today_date}.txt")
+    new_producer_file = os.path.join(past_meta_dir, f"producer_file_{today_date}.txt")
+    new_consumer_file = os.path.join(past_meta_dir, f"consumer_file_{today_date}.txt")
+
+    # Move the files
+    os.rename(download_file, new_download_file)
+    os.rename(producer_file, new_producer_file)
+    os.rename(consumer_file, new_consumer_file)
+
+    print(f"Files moved to '{past_meta_dir}' with today's date.")
+
+
 

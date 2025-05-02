@@ -277,6 +277,16 @@ data['Metro'] = metro_group
 
 #Saving the data -- will rewrite the file
 #TODO: Save the date of the probe selection!!
+#Check if the save folder exists
+if not os.path.exists(f'./Library_Static_Data/Results_{library_name}/Past_probes'):
+    os.makedirs(f'./Library_Static_Data/Results_{library_name}/Past_probes')
+
+#Check if the file exists
+if os.path.exists(f'./Library_Static_Data/Results_{library_name}/grouped_probes.json'):
+    os.rename(
+        f'./Library_Static_Data/Results_{library_name}/grouped_probes.json',
+        f'./Library_Static_Data/Results_{library_name}/Past_probes/grouped_probes_{date.today()}.json'
+    )
 with open(f'./Library_Static_Data/Results_{library_name}/grouped_probes.json', 'w') as f:
     json.dump(data, f, indent=4)
 

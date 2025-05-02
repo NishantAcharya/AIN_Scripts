@@ -187,7 +187,7 @@ def main(buffer_size, producer_file, consumer_file, inpt_file,secure_key):
           break
 
         print(f"Nothing to consume, Sleeping")
-        time.sleep(540) #Sleep for a longer time than producer
+        time.sleep(400) #Sleep for a longer time than producer
         continue
       
       print('Passing through the produced items')

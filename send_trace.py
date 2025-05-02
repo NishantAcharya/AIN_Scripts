@@ -273,12 +273,21 @@ def main(max_buffer_size, producer_file, consumer_file, inpt_file,secure_key):
           except KeyError:
               probe_dict[probe_locations[i]] = []
           probe_dict[probe_locations[i]].append(ips[i])
+
+        line_dict = {}
+        for i in range(len(probe_locations)):
+          try:
+            temp = line_dict[probe_locations[i]]
+          except KeyError:
+            line_dict[probe_locations[i]] = []
+          line_dict[probe_locations[i]].append(lines[i])
            
 
         for name in probe_dict.keys():
           #probe location is just the name -- this script should be run from the base directory
           probe_location = f'./Library_Static_Data/{name}/grouped_probes.json'
           ad_ips = probe_dict[name]
+          ad_lines = line_dict[name]
           with open(probe_location) as f:
               data = json.load(f)
 
@@ -294,24 +303,34 @@ def main(max_buffer_size, producer_file, consumer_file, inpt_file,secure_key):
           #Bulk traceroute
           msms = []
           CHUNK_SIZE = 1
-          SLEEP_TIME = 1.2 #50 measurements in 1 minute
+          SLEEP_TIME = 1.8 #8.6 #7 measurements per minute
+          #Change this to 1.7 for Alex's API
           #Dividing into smaller chunks
           for i in range(0, len(ad_ips), CHUNK_SIZE):
             chunk = ad_ips[i:i + CHUNK_SIZE]
-            #There needs to be a check if the measument is not stopped, as in check status
+            chunk_lines = ad_lines[i:i + CHUNK_SIZE]
             
             inter_msm = create_trace_bulk(prbs,chunk,key)
             msms.extend(inter_msm)
+            
+            new_lines = []
+            for i in range(len(chunk)):
+              new_line = chunk_lines[i] + '-' + str(inter_msm[i]) + '\n'
+              new_lines.append(new_line)
+            #Writing the new lines to the producer file
+            with open(producer_file, 'a') as file:
+              file.writelines(new_lines)
+
             #Waiting to make sure the measurement doesn't get overloaded
             time.sleep(SLEEP_TIME)
-          new_lines = []
-          for i in range(len(ad_ips)):
-            new_line = lines[i] + '-' + str(msms[i]) + '\n' # IP-CIDR-DIRECTORY-MSM
-            new_lines.append(new_line)
+          #new_lines = []
+          #for i in range(len(ad_ips)):
+          #  new_line = lines[i] + '-' + str(msms[i]) + '\n' # IP-CIDR-DIRECTORY-MSM
+          #  new_lines.append(new_line)
 
           #Writing the new lines to the producer file
-          with open(producer_file, 'a') as file:
-            file.writelines(new_lines)
+          #with open(producer_file, 'a') as file:
+          #  file.writelines(new_lines)
 
 #My Key
 #secure_key = '1HHbx12-dd8a740b-2855-4e45-9595-e8a4524d8924-JggFtv'
@@ -320,14 +339,14 @@ def main(max_buffer_size, producer_file, consumer_file, inpt_file,secure_key):
 #secure_key = 'oppA12-7e706d8e-8447-49fe-baf5-705d893c5aba-1dcb12'
 
 #Alex's Key
-#secure_key =  '1002abbbeg-42f5aee4-e4d0-4570-a5cf-b31384860e44-Xyzngo'
+secure_key =  '1002abbbeg-42f5aee4-e4d0-4570-a5cf-b31384860e44-Xyzngo'
 
 #Vijeth Key
-secure_key = 'jj8080-7cb0bc87-417b-44c7-9e53-ed4c50972003-1bd34'
+#secure_key = 'jj8080-7cb0bc87-417b-44c7-9e53-ed4c50972003-1bd34'
 
 #probes = [21003,55451,1009747,10342,1145,52574,53097,55692,1008382,30350]
 #Redo Probe collection here, only select the unqiue probes
 
 #arg1 --> producer file, arg2 --> consumer file, arg3 --> inpt file
 #Use 1000 as buffer size
-main(100,produce_file,consume_file,inpt_file,secure_key)
+main(2000,produce_file,consume_file,inpt_file,secure_key)

@@ -151,9 +151,11 @@ def read_traceroute(folder_names, dest_file,probe_path, lat_lon):
                 prb_item['Final_Hop_Differences'][d_key].append(difference)
                   
                 ip_data[item['prb_id']] = prb_item
+                #TODO
                 #Get the probe lat,long here -- if not found -- which should not be the case
                 #for same day measurements (Save all grouped probes based on the date!)
                 #Then find the distance and update the latency
+                
                 #Consolidating the final differences
                 for entry in prb_item['Final_Hop_Differences'].keys():
                   try:
@@ -212,7 +214,7 @@ def main():
       with open(dest_folder, 'w') as f:
           json.dump(data, f, indent=4)
 
-      #Checking last mile latencies
+      #Checking last mile latencies --- THE IDEA
       #Store the second last and last hop IPs as pairs for only the traces whose destination replied (otherwise we can't really say anything for access net)
       #The dicrionary will store the difference between those two pairs for that library group
       #Question? --> What if we just foudn them on bad day? -- high RTT difference? -- can't do much that's an issue
