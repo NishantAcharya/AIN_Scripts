@@ -37,17 +37,6 @@ consume_file = str(sys.argv[2])
 inpt_file = str(sys.argv[3])
 
 def read_n_lines_no_newlines(filename, n):
-  """
-  Reads the first n lines from a file and removes all newline characters ('\n') from each line.
-
-  Args:
-    filename: The name of the file to read.
-    n: The number of lines to read.
-
-  Returns:
-    A list of strings, where each string is a line from the file without newline characters.
-  """
-
   try:
     with open(filename, 'r') as file:
       lines = [line.strip() for line in file.readlines()[:n]]
@@ -58,17 +47,6 @@ def read_n_lines_no_newlines(filename, n):
   
 
 def read_n_lines_from_line(filename, start_line, n):
-  """
-  Reads n lines from a given line in a file.
-
-  Args:
-    filename: The name of the file to read.
-    start_line: The line number to start reading from (1-indexed).
-    n: The number of lines to read.
-
-  Returns:
-    A list of strings, where each string is a line from the file.
-  """
   try:
     with open(filename, 'r') as file:
       f_lines = file.readlines()
@@ -88,15 +66,6 @@ def read_n_lines_from_line(filename, start_line, n):
 
   
 def count_lines_in_file(filename):
-  """
-  Counts the total number of lines in a given file.
-
-  Args:
-    filename: The name of the file to count lines in.
-
-  Returns:
-    The total number of lines in the file.
-  """
   try:
     with open(filename, 'r') as file:
       return sum(1 for _ in file)  # Efficiently count lines using generator expression
@@ -264,7 +233,19 @@ def main(max_buffer_size, producer_file, consumer_file, inpt_file,secure_key):
         split_key = secure_key.split('-')
         key = '-'.join(split_key[1:-1])
         #IP-CIDR-DIRECTORY
-        probe_locations = [line.strip().split('-')[2] for line in lines]
+        #Check if the line split length is more than 3 elements
+        probe_locations = []
+        for line in lines:
+          if len(line.strip().split('-')) == 3:
+            probe_locations.append('-'.join(line.strip().split('-')[2:]))
+          elif len(line.strip().split('-')) > 3:
+            print(f'Library has - as a seprator {line[2:]}')
+            probe_locations.append('-'.join(line.strip().split('-')[2:]))
+          else:
+            print(f"Error: Line '{line}' does not have enough elements to split.")
+            with open('error_log.txt', 'a') as error_file:
+              error_file.write(f"Error: Line '{line}' does not have enough elements to split.\n")
+            continue
 
         probe_dict = {}
         for i in range(len(probe_locations)):
@@ -333,10 +314,10 @@ def main(max_buffer_size, producer_file, consumer_file, inpt_file,secure_key):
           #  file.writelines(new_lines)
 
 #My Key
-#secure_key = '1HHbx12-dd8a740b-2855-4e45-9595-e8a4524d8924-JggFtv'
+secure_key = '1HHbx12-dd8a740b-2855-4e45-9595-e8a4524d8924-JggFtv'
 
 #My other key
-secure_key = 'oppA12-7e706d8e-8447-49fe-baf5-705d893c5aba-1dcb12'
+#secure_key = 'oppA12-7e706d8e-8447-49fe-baf5-705d893c5aba-1dcb12'
 
 #Alex's Key
 #secure_key =  '1002abbbeg-42f5aee4-e4d0-4570-a5cf-b31384860e44-Xyzngo'

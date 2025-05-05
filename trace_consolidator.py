@@ -11,15 +11,6 @@ import math
 import geopy
 
 def get_all_files_in_folder(folder_path):
-  """
-  Gets a list of all files within a given folder.
-
-  Args:
-    folder_path: The path to the folder.
-
-  Returns:
-    A list of file names within the folder.
-  """
   try:
     return [f for f in os.listdir(folder_path) if os.path.isfile(os.path.join(folder_path, f))]
   except FileNotFoundError:
@@ -27,13 +18,6 @@ def get_all_files_in_folder(folder_path):
     return []
   
 def write_lines_to_file(filename, lines):
-  """
-  Writes a list of lines to a file.
-
-  Args:
-    filename: The name of the file to write to.
-    lines: A list of strings, where each string represents a line to be written.
-  """
   try:
     with open(filename, 'w') as file:
       file.writelines(line + '\n' for line in lines)

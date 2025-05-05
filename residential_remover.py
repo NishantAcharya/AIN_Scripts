@@ -52,31 +52,11 @@ def break_cidr(cidr, target_mask):
     return subnets
 
 def is_subnet(network1_str, network2_str):
-  """
-  Checks if network1 is a subnet of network2.
-
-  Args:
-    network1_str: The first network in CIDR notation (e.g., "192.168.1.0/24").
-    network2_str: The second network in CIDR notation (e.g., "192.168.0.0/16").
-
-  Returns:
-    True if network1 is a subnet of network2, False otherwise.
-  """
   network1 = ipaddress.ip_network(network1_str)
   network2 = ipaddress.ip_network(network2_str)
   return network1.subnet_of(network2)
 
 def apply_netmask(ip, mask):
-    """
-    Apply a netmask to an IP address.
-
-    Args:
-        ip: The IP address to apply the netmask to.
-        mask: The netmask to apply to the IP address.
-
-    Returns:
-        The IP address with the netmask applied.
-    """
     return str(ipaddress.ip_network(f"{ip}/{mask}", strict=False))
 
 input_file = sys.argv[1] #Results_{lib_name}/final_cidrs.txt

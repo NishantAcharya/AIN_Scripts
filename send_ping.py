@@ -38,17 +38,6 @@ inpt_file = str(sys.argv[3])
 probes_location = str(sys.argv[4])
 
 def read_n_lines_no_newlines(filename, n):
-  """
-  Reads the first n lines from a file and removes all newline characters ('\n') from each line.
-
-  Args:
-    filename: The name of the file to read.
-    n: The number of lines to read.
-
-  Returns:
-    A list of strings, where each string is a line from the file without newline characters.
-  """
-
   try:
     with open(filename, 'r') as file:
       lines = [line.strip() for line in file.readlines()[:n]]
@@ -59,17 +48,6 @@ def read_n_lines_no_newlines(filename, n):
   
 
 def read_n_lines_from_line(filename, start_line, n):
-  """
-  Reads n lines from a given line in a file.
-
-  Args:
-    filename: The name of the file to read.
-    start_line: The line number to start reading from (1-indexed).
-    n: The number of lines to read.
-
-  Returns:
-    A list of strings, where each string is a line from the file.
-  """
   try:
     with open(filename, 'r') as file:
       f_lines = file.readlines()
@@ -88,15 +66,6 @@ def read_n_lines_from_line(filename, start_line, n):
 
   
 def count_lines_in_file(filename):
-  """
-  Counts the total number of lines in a given file.
-
-  Args:
-    filename: The name of the file to count lines in.
-
-  Returns:
-    The total number of lines in the file.
-  """
   try:
     with open(filename, 'r') as file:
       return sum(1 for _ in file)  # Efficiently count lines using generator expression

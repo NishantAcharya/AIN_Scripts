@@ -1,7 +1,7 @@
 from ripe.atlas.cousteau import AtlasStopRequest,AtlasResultsRequest
 
 def stop_measurement(msm):
-    ATLAS_STOP_API_KEY = "42f5aee4-e4d0-4570-a5cf-b31384860e44"
+    ATLAS_STOP_API_KEY = "KEY"
 
     atlas_request = AtlasStopRequest(msm_id=msm, key=ATLAS_STOP_API_KEY)
 

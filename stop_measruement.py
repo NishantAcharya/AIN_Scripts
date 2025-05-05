@@ -46,7 +46,7 @@ def stop__measurement(msm_id,secure_key):
     except Exception as e:
         print(f"An error occurred while stopping measurement {msm_id}: {e} -- Please check Response {response}")
 
-secure_key = '1002abbbeg-42f5aee4-e4d0-4570-a5cf-b31384860e44-Xyzngo'
+secure_key = 'KEY'
 start_ip = 99349373
 end_ip = 99350661
 

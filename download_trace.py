@@ -39,17 +39,6 @@ import multiprocessing
 #output_file = sys.argv[2] #Remember to create the Folder if it does not exist
 
 def read_n_lines_no_newlines(filename, n):
-  """
-  Reads the first n lines from a file and removes all newline characters ('\n') from each line.
-
-  Args:
-    filename: The name of the file to read.
-    n: The number of lines to read.
-
-  Returns:
-    A list of strings, where each string is a line from the file without newline characters.
-  """
-
   try:
     with open(filename, 'r') as file:
       lines = [line.strip() for line in file.readlines()[:n]]
@@ -59,15 +48,6 @@ def read_n_lines_no_newlines(filename, n):
     return []
   
 def count_lines_in_file(filename):
-  """
-  Counts the total number of lines in a given file.
-
-  Args:
-    filename: The name of the file to count lines in.
-
-  Returns:
-    The total number of lines in the file.
-  """
   try:
     with open(filename, 'r') as file:
       return sum(1 for _ in file)  # Efficiently count lines using generator expression
@@ -77,15 +57,6 @@ def count_lines_in_file(filename):
   
 
 def read_all_lines_no_newlines(filename):
-  """
-  Reads all lines from a file and removes all newline characters ('\n') from each line.
-
-  Args:
-    filename: The name of the file to read.
-
-  Returns:
-    A list of strings, where each string is a line from the file without newline characters.
-  """
   try:
     with open(filename, 'r') as file:
       lines = [line.strip() for line in file]
@@ -145,17 +116,24 @@ def main(data):
     # Get the current process name
     process_name = multiprocessing.current_process().name
 
-    #My Key
-    secure_key = '1HHbx12-1c3d00e0-cd3b-46eb-916a-33d0396750ec-JggFtv'
-
-    #Alex's Key
-    #secure_key =  '1002abbbeg-42f5aee4-e4d0-4570-a5cf-b31384860e44-Xyzngo'
-
     #IP-CIDR-DIRECTORY-MSM
-    ip = data.split('-')[0]
-    cidr = data.split('-')[1]
-    directory = data.split('-')[2]
-    msm = data.split('-')[3]
+    if len(data.split('-')) < 4:
+      with open('error_log.txt', 'a') as error_file:
+        error_file.write(f"Error: Data '{data}' does not contain enough parts.\n")
+      return
+    if len(data.split('-')) == 4:
+      ip = data.split('-')[0]
+      cidr = data.split('-')[1]
+      directory = data.split('-')[2]
+      msm = data.split('-')[3]
+    else:
+      ip = data.split('-')[0]
+      cidr = data.split('-')[1]
+      msm = data.split('-')[-1]
+      
+      directory = '-'.join(data.split('-')[2:-1])
+      with open('error_log.txt', 'a') as error_file:
+        error_file.write(f"Error: Directory has a seprator - '{data}'.\n")
     print(f"Process {process_name} is processing data: {msm}")
     result = retreive_msm(msm)
     print(result)
@@ -214,9 +192,9 @@ if __name__ == '__main__':
     os.makedirs(past_meta_dir, exist_ok=True)
 
     # Define new file paths with today's date
-    new_download_file = os.path.join(past_meta_dir, f"download_file_{today_date}.txt")
-    new_producer_file = os.path.join(past_meta_dir, f"producer_file_{today_date}.txt")
-    new_consumer_file = os.path.join(past_meta_dir, f"consumer_file_{today_date}.txt")
+    new_download_file = os.path.join(past_meta_dir, f"{download_file}_{today_date}.txt")
+    new_producer_file = os.path.join(past_meta_dir, f"{producer_file}_{today_date}.txt")
+    new_consumer_file = os.path.join(past_meta_dir, f"{consumer_file}_{today_date}.txt")
 
     # Move the files
     os.rename(download_file, new_download_file)
