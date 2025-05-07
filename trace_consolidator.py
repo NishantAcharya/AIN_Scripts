@@ -9,6 +9,7 @@ import ipaddress
 import statistics
 import math
 import geopy
+import sys
 
 def get_all_files_in_folder(folder_path):
   try:
@@ -26,7 +27,8 @@ def write_lines_to_file(filename, lines):
     return
 
 #This function will read a traceroute and get the IPs in a traceroute, given the a folder_set with the trace data
-def read_traceroute(folder_names, dest_file,probe_path, lat_lon):
+#,probe_path, lat_lon
+def read_traceroute(folder_names, dest_file):
     data = {}
     data_lines = []
     folder_count = 0
@@ -136,9 +138,15 @@ def read_traceroute(folder_names, dest_file,probe_path, lat_lon):
                   
                 ip_data[item['prb_id']] = prb_item
                 #TODO
-                #Get the probe lat,long here -- if not found -- which should not be the case
+                #Store info for all last-second last hops -- check if this is true
+                #
+                # Get the probe lat,long here -- if not found -- which should not be the case
                 #for same day measurements (Save all grouped probes based on the date!)
                 #Then find the distance and update the latency
+                #Also at the end get the domain name using rdns on the last and second last domain
+                #Once all the above is done, get the lowest 3 RTTs in order per IP
+                ##This will be used for CBG analysis
+                #Test for boston public library
                 
                 #Consolidating the final differences
                 for entry in prb_item['Final_Hop_Differences'].keys():
@@ -165,9 +173,15 @@ def read_traceroute(folder_names, dest_file,probe_path, lat_lon):
     return data
 
 def main():
-    info_file = 'other_libs.txt'
+    info_file = 'test_file.txt'
     directory = './Library_Static_Data/'
     folders = os.listdir(directory)
+    #Compare_name
+    with open(info_file, 'r') as f:
+        lines = f.readlines()
+        lines = [line.strip() for line in lines]
+        comp_lines = [line.split('~')[2] for line in lines]
+        
     for folder in folders:
       current_path = os.path.join(directory, folder)
       json_path = os.path.join(current_path, 'JSON')
@@ -178,11 +192,13 @@ def main():
       folder_names = os.listdir(json_path)
       folder_names = [os.path.join(json_path, folder) for folder in folder_names]
       dest_file = os.path.join(current_path, 'meta.txt')
-      print(f'Processing {folder}...')
+      
       name = folder.split('Results_')[1]
       name = name.replace('?','/')
       name = name.replace('_',' ')
-      print(name)
+      if name not in comp_lines:
+        continue
+      print(f'Processing {folder}...')
       #Looking for the lat long values in info_file
       with open(info_file, 'r') as f:
           lines = f.readlines()
@@ -192,7 +208,9 @@ def main():
                   lat = float(line.split('~')[0].strip())
                   lon = float(line.split('~')[1].strip())
                   break
-      data = read_traceroute(folder_names, dest_file,probe_path,(lat,lon))
+      #,probe_path,(lat,lon)
+      print(f'Lat: {lat}, Lon: {lon}')
+      data = read_traceroute(folder_names, dest_file)
       dest_folder = os.path.join(current_path, 'Trace_data.json')
       #Check if the folder exists
       with open(dest_folder, 'w') as f:

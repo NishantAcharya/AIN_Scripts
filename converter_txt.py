@@ -14,11 +14,6 @@ def delete_file(file_path):
         print(f"Error deleting file {file_path}: {e}")
 
 def remove_empty_lines(filepath):
-    """Removes empty lines from a file.
-
-    Args:
-        filepath: The path to the file.
-    """
     with open(filepath, 'r') as file:
         lines = file.readlines()
 

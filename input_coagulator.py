@@ -18,9 +18,9 @@ selected_libs  = []
 selected_cidrs = []
 #MANUALLY UPDATE THIS SECTION for the numeber and type of libraries
 #current_count = 25
-current_high_cidr = 7000
-current_low_cidr = 3000
-Max_count = 40000
+current_high_cidr = 1000
+current_low_cidr = 0
+Max_count = 9000
 #######Alex API inputs
 current_cidr_count = 0
 for i in range(len(input_names)):
@@ -208,4 +208,59 @@ with open('input_nish_2.txt', 'w') as f:
 
 #########################Running a 4th time -- validation IPs
 directory = './Library_Static_Data/'
-input_file = './validation_ips.txt' # Get this CSV file
+input_file = './validation_libraries.txt'
+with open(input_file, 'r') as f:
+    lines = f.readlines()
+    val_libs = [line.strip().split('~')[2].strip() for line in lines]
+
+selected_libs  = []
+selected_cidrs = []
+
+with open('Selected_libraries_alex.txt', 'r') as f:
+    lines = f.readlines()
+    selected_libs_alex = [line.strip() for line in lines]
+
+with open('Selected_libraries_nish.txt', 'r') as f:
+    lines = f.readlines()
+    selected_libs_nish = [line.strip() for line in lines]
+
+with open('Selected_libraries_nish_2.txt', 'r') as f:
+    lines = f.readlines()
+    selected_libs_nish_2 = [line.strip() for line in lines]
+
+for i in range(len(val_libs)):
+
+    name = val_libs[i]
+    if name in selected_libs_alex or name in selected_libs_done or name in selected_libs_nish or name in selected_libs_nish_2:
+        continue
+
+    name = f"Results_{name.strip().replace(' ','_')}"
+    print(name)
+    selected_libs.append(name)
+
+with open('Selected_libraries_val.txt', 'w') as f:
+    for lib in selected_libs:
+        f.write(lib.split('Results_')[1].replace('?','/').replace('_',' ') + '\n')
+#Get a list of folders in the directory -- remove any folder that doesnot contain a library from the library_data.txt(500 sub sampled)
+
+input_folders = []
+for folder in os.listdir(directory):
+    if os.path.isdir(os.path.join(directory, folder)) and folder in selected_libs:
+        input_folders.append(folder)
+
+#From each folder copy the filtered_ips.txt
+inpts = []
+for folder in input_folders:
+    path = os.path.join(directory, folder, 'filtered_ips.txt')
+    print(path)
+    if os.path.exists(path):
+        with open(path, 'r') as f:
+            lines = f.readlines()
+            folder.replace('-','~')
+            lines = [line.strip()+'-'+str(folder) for line in lines]
+            inpts.extend(lines)
+
+
+with open('input_val.txt', 'w') as f:
+    for line in tqdm(inpts):
+        f.write(line + '\n')
