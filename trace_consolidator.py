@@ -74,7 +74,7 @@ def read_traceroute(folder_names, dest_file, probe_data, lat_lon):
             ips_t.add(ip)
             cidr = file.split('-')[2].strip()
             
-            ip_data = {'Failed': False, 'CIDR' :cidr.replace("?","/").split(".")[0],'MSM_ID': msm_id, 'Last_Hop_Second_Last_Hop_Difference':{}, 'Common_IPs':{}, 'Common_CIDRs':{},'Final_Hops':{}}
+            ip_data = {'Failed': False, 'CIDR' :cidr.replace("?","/").split(".")[0],'MSM_ID': msm_id, 'Last_Hop_Second_Last_Hop_Difference':{}, 'Common_IPs':{}, 'Common_CIDRs':{},'Last_Hops_final':[]}
             ip_data['Lat'] = lat_lon[0]
             ip_data['Lon'] = lat_lon[1]
             if ip not in temp.keys():
@@ -160,15 +160,18 @@ def read_traceroute(folder_names, dest_file, probe_data, lat_lon):
                 #Saving RTT differences between the final two hops -- slightly crude since we don't check for full networks
                 difference = math.inf
                 
+                d_key = f'{last_hop_ip}-{second_last_hop}'
                 if second_last_rtt != math.inf and last_hop_rtt != math.inf:
-                  d_key = f'{last_hop_ip}-{second_last_hop}'
+                  if last_hop_rtt == '*':
+                    last_hop_rtt = math.inf
+                  if second_last_rtt == '*':
+                    second_last_rtt = math.inf
                   difference = last_hop_rtt - second_last_rtt
 
                 
                 #Cleaning -- no math.inf -- changed to None
                 if difference == math.inf:
                   difference = None
-                
                 
                 if second_last_rtt == math.inf:
                   prb_item['Second_Last_RTT'] = None
@@ -191,16 +194,6 @@ def read_traceroute(folder_names, dest_file, probe_data, lat_lon):
                 
                   
                 ip_data[item['prb_id']] = prb_item
-
-                #Find the lowest +ve RTT difference for each last hop - second last hop pair, apply that to the final hop rtt
-                #If only 1 then, check if over avg RTT between prbe and destination, if yes, use the second last hop RTT
-
-                #Calculate the rdns of the last hop IPs, then do a hoiho reuqest and map the lat,long to domain to probe
-                #If the distance beween the lat,long (this and library) is closer than 25 Km, update the geoloc boolean
-
-                #Get the smallest rtt probes
-                
-
                 
                 #Consolidating the final differences
                 for entry in prb_item['Final_Hop_Differences'].keys():
@@ -226,6 +219,82 @@ def read_traceroute(folder_names, dest_file, probe_data, lat_lon):
             # Remove items from Common_IPs and Common_CIDRs with len(values) <= 1
             ip_data['Common_IPs'] = {k: v for k, v in ip_data['Common_IPs'].items() if len(v) > 1}
             ip_data['Common_CIDRs'] = {k: v for k, v in ip_data['Common_CIDRs'].items() if len(v) > 1}
+
+            #Find the lowest +ve RTT difference for each last hop - second last hop pair, apply that to the final hop rtt
+            #If only 1 then, check if over avg RTT between prbe and destination, if yes, use the second last hop RTT
+            difference_data = ip_data['Last_Hop_Second_Last_Hop_Difference']
+            min_difference_data = {}
+            for key in difference_data.keys():
+                if len(difference_data[key]) == 1:
+                    min_difference_data[key] = difference_data[key][0]
+                else:
+                    min_difference_data[key] = min([x for x in difference_data[key] if x is not None and x > 0])
+            ip_data['Min_lhop_difference'] = min_difference_data
+
+
+            #Going over the probes, and updating the usable_last hop IP
+            #If the difference is more than distance*0.001 + 14.75, then use the second last hop RTT
+            for key in ip_data:
+              if type(key) != int:
+                continue
+              prb_item = ip_data[key]
+              differ_key = list(prb_item['Final_Hop_Differences'].keys())[0]
+              final_hop_differences = prb_item['Final_Hop_Differences'][differ_key][0] # Only 1 value will be here, maybe update in Future?
+              if final_hop_differences < 0:
+                #Negative ones are avoided
+                ip_data[key]['Usable_Last_Hop_RTT'] = prb_item['Last_RTT']
+                ip_data[key]['Usable_Last_Hop_IP'] = prb_item['Last_Hop_IP']
+                continue
+              current_hop_differ = ip_data['Min_lhop_difference'][differ_key]
+              if final_hop_differences > current_hop_differ:
+                ip_data[key]['Usable_Last_Hop_RTT'] = prb_item['Second_Last_RTT'] + current_hop_differ
+                ip_data[key]['Usable_Last_Hop_IP'] = prb_item['Last_Hop_IP']
+              else:
+                ip_data[key]['Usable_Last_Hop_RTT'] = prb_item['Last_RTT']
+                ip_data[key]['Usable_Last_Hop_IP'] = prb_item['Last_Hop_IP']
+
+              #Checking if second last RTT is massively smaller than last RTT
+              distance = prb_item['Distance Destination']
+              max_rtt_expected = 14.75 + 0.015 * distance
+              if prb_item['Usable_Last_Hop_RTT'] > max_rtt_expected:
+                ip_data[key]['Usable_Last_Hop_RTT'] = prb_item['Second_Last_RTT']
+                ip_data[key]['Usable_Last_Hop_IP'] = prb_item['Second_Last_Hop']
+
+              ip_data['Last_Hops_final'].append(ip_data[key]['Usable_Last_Hop_IP'])
+              
+            #Calculate the rdns of the last hop IPs, then do a hoiho reuqest and map the lat,long to domain to probe
+            #If the distance beween the lat,long (this and library) is closer than 25 Km, update the geoloc boolean
+            ip_data['Last_Hops_final'] = list(set(ip_data['Last_Hops_final']))
+            domains_dict = perform_lookups(ip_data['Last_Hops_final'])
+            
+
+            domain_list = []
+            for ip in ip_data['Last_Hops_final']:
+                domain = domains_dict[ip]
+                if domain is not None:
+                    domain_list.append(domain)
+                else:
+                    domain_list.append('*') #Placeholder for no domain found
+            #Not needed after this
+            ip_data['Last_Hops_final'] = domains_dict
+            #Querying Hoiho
+            data = domain_list
+            url = 'https://api.hoiho.caida.org/lookups'
+            response = requests.post(url, json=data)
+            if response.status_code == 200:
+                print("Request was successful.")
+                response_data = response.json()
+            else:
+                print(f"Request failed with status code: {response.status_code}")
+                print(response.text)
+                reponse_data = None #Make sure you handle this
+
+            #Parsing the response data
+            
+
+               
+
+            #Get the smallest rtt probes
             
             
     write_lines_to_file(dest_file, data_lines)
