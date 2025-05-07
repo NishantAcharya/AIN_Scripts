@@ -3,10 +3,6 @@ import sys
 import random
 
 def worker_function(data):
-    """
-    This function will be executed by each process.
-    It receives a single input argument.
-    """
     # Get the current process name
     process_name = multiprocessing.current_process().name
 

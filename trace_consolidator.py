@@ -10,6 +10,25 @@ import statistics
 import math
 import geopy
 import sys
+import requests
+import json
+import socket
+import multiprocessing
+import ast
+from geopy.distance import geodesic
+
+def reverse_dns_lookup(ip):
+    try:
+        result = socket.gethostbyaddr(ip)
+        return {ip: result[0]}  # Return the hostname
+    except:
+        return {ip: None}  # Return None if no hostname is found
+    
+def perform_lookups(ip_list):
+    with multiprocessing.Pool() as pool:
+        results = pool.map(reverse_dns_lookup, ip_list)
+    return dict(item for result in results for item in result.items())
+
 
 def get_all_files_in_folder(folder_path):
   try:
@@ -28,7 +47,7 @@ def write_lines_to_file(filename, lines):
 
 #This function will read a traceroute and get the IPs in a traceroute, given the a folder_set with the trace data
 #,probe_path, lat_lon
-def read_traceroute(folder_names, dest_file):
+def read_traceroute(folder_names, dest_file, probe_data, lat_lon):
     data = {}
     data_lines = []
     folder_count = 0
@@ -55,8 +74,9 @@ def read_traceroute(folder_names, dest_file):
             ips_t.add(ip)
             cidr = file.split('-')[2].strip()
             
-            ip_data = {'Failed': False, 'CIDR' :cidr.replace("?","/").split(".")[0],'MSM_ID': msm_id, 'Last_Hop_Second_Last_Hop_Difference':{}}
-
+            ip_data = {'Failed': False, 'CIDR' :cidr.replace("?","/").split(".")[0],'MSM_ID': msm_id, 'Last_Hop_Second_Last_Hop_Difference':{}, 'Common_IPs':{}, 'Common_CIDRs':{},'Final_Hops':{}}
+            ip_data['Lat'] = lat_lon[0]
+            ip_data['Lon'] = lat_lon[1]
             if ip not in temp.keys():
                print(f'IP {ip} not in file {file}')
                ip_data['Failed'] = True
@@ -66,7 +86,7 @@ def read_traceroute(folder_names, dest_file):
             #Getting the traceroutes and last_hop_ip per prb
             for item in temp[ip]:
                 #The probes update every day so we will have to update this everyday too
-                prb_item = {'Traceroute':[], 'Last_Hop_IP':None, 'Dest_Replied':False, 'RTTs':[], 'Second_Last_Hop':None, 'Last_RTT':None, 'Second_Last_RTT':None,'Final_Hop_Differences':{}}
+                prb_item = {'Traceroute':[], 'Last_Hop_IP':None, 'Dest_Replied':False, 'Domain_info_close': False,'RTTs':[], 'Second_Last_Hop':None, 'Last_RTT':None, 'Second_Last_RTT':None,'Final_Hop_Differences':{}}
                 prb_item['Dest_Replied'] = item['destination_ip_responded']
                 traceroute_full = item['result']
                 last_hop_ip = item['src_addr'] #Start with the source address
@@ -92,6 +112,21 @@ def read_traceroute(folder_names, dest_file):
                         hop_ip = hop['result'][0]['from'] #Single ping traceroute, for more scan the full list
                         if not ipaddress.ip_address(hop_ip).is_private:
                             last_hop_ip = hop_ip
+                            current_cidr = str(ipaddress.ip_network(hop_ip + '/24', strict=False))
+                            # Finding common CIDRs and IPs in the traceroute
+                            try:
+                              temp = ip_data['Common_CIDRs'][str(current_cidr)]
+                            except KeyError:
+                              ip_data['Common_CIDRs'][current_cidr] = []
+
+                            ip_data['Common_CIDRs'][current_cidr].append(item['prb_id'])
+
+                            try:
+                              temp = ip_data['Common_IPs'][hop_ip]
+                            except KeyError:
+                              ip_data['Common_IPs'][hop_ip] = []
+                            ip_data['Common_IPs'][hop_ip].append(item['prb_id'])
+                            #############
                             if rtt != '*':
                               last_hop_rtt = rtt
                             else:
@@ -104,7 +139,6 @@ def read_traceroute(folder_names, dest_file):
                 
                 prb_item['Last_Hop_IP'] = last_hop_ip
                 prb_item['Last_RTT'] = last_hop_rtt
-
                 #Finding the second last hop IP
                 second_last_hop = None
                 second_last_rtt = math.inf
@@ -129,24 +163,44 @@ def read_traceroute(folder_names, dest_file):
                 if second_last_rtt != math.inf and last_hop_rtt != math.inf:
                   d_key = f'{last_hop_ip}-{second_last_hop}'
                   difference = last_hop_rtt - second_last_rtt
+
+                
+                #Cleaning -- no math.inf -- changed to None
+                if difference == math.inf:
+                  difference = None
+                
+                
+                if second_last_rtt == math.inf:
+                  prb_item['Second_Last_RTT'] = None
+
+                if last_hop_rtt == math.inf:
+                  prb_item['Last_RTT'] = None
                 
                 try:
                   item = prb_item['Final_Hop_Differences'][d_key]
                 except KeyError:
                   prb_item['Final_Hop_Differences'][d_key] = []
                 prb_item['Final_Hop_Differences'][d_key].append(difference)
+
+                id = item['prb_id']
+                probe_lat_lon = tuple(probe_data[str(id)][1])
+                prb_item['Lat,Long'] = probe_lat_lon
+                # Calculate the distance between the probe and the destination
+                prb_item['Distance Destination'] = geodesic(probe_lat_lon, (lat_lon[0], lat_lon[1])).kilometers
+
+                
                   
                 ip_data[item['prb_id']] = prb_item
-                #TODO
-                #Store info for all last-second last hops -- check if this is true
-                #
-                # Get the probe lat,long here -- if not found -- which should not be the case
-                #for same day measurements (Save all grouped probes based on the date!)
-                #Then find the distance and update the latency
-                #Also at the end get the domain name using rdns on the last and second last domain
-                #Once all the above is done, get the lowest 3 RTTs in order per IP
-                ##This will be used for CBG analysis
-                #Test for boston public library
+
+                #Find the lowest +ve RTT difference for each last hop - second last hop pair, apply that to the final hop rtt
+                #If only 1 then, check if over avg RTT between prbe and destination, if yes, use the second last hop RTT
+
+                #Calculate the rdns of the last hop IPs, then do a hoiho reuqest and map the lat,long to domain to probe
+                #If the distance beween the lat,long (this and library) is closer than 25 Km, update the geoloc boolean
+
+                #Get the smallest rtt probes
+                
+
                 
                 #Consolidating the final differences
                 for entry in prb_item['Final_Hop_Differences'].keys():
@@ -163,6 +217,17 @@ def read_traceroute(folder_names, dest_file):
             
             data[ip] = ip_data
             data_count += 1
+            # Remove duplicates from the lists in Common_IPs and Common_CIDRs
+            for k in ip_data['Common_IPs']:
+                ip_data['Common_IPs'][k] = list(set(ip_data['Common_IPs'][k]))
+            for k in ip_data['Common_CIDRs']:
+                ip_data['Common_CIDRs'][k] = list(set(ip_data['Common_CIDRs'][k]))
+            
+            # Remove items from Common_IPs and Common_CIDRs with len(values) <= 1
+            ip_data['Common_IPs'] = {k: v for k, v in ip_data['Common_IPs'].items() if len(v) > 1}
+            ip_data['Common_CIDRs'] = {k: v for k, v in ip_data['Common_CIDRs'].items() if len(v) > 1}
+            
+            
     write_lines_to_file(dest_file, data_lines)
     print(f'Network Errors: {network_error_count}')
     print(f'Folder Count: {folder_count}')
@@ -171,6 +236,47 @@ def read_traceroute(folder_names, dest_file):
     print(f'IPs: {len(ips_t)}')#Some IPs are overlapping from the original CIDRs sepration -- probably due to there being a /28 and a /26
     #From two datasets
     return data
+
+#The goal of this function is to make sure all probes are available without extra processing
+def merge_probes(probe_path,probe_directory):
+  intial_data = json.load(open(probe_path, 'r'))
+  #Checking if probe directory exists
+  if not os.path.exists(probe_directory):
+      print(f'Probe directory {probe_directory} does not exist')
+      return intial_data
+  
+  for file in os.listdir(probe_directory):
+    if '.json' not in file:
+        continue
+    file_path = os.path.join(probe_directory, file)
+    with open(file_path, 'r') as f:
+        current_data = json.load(f)
+        #Loading close_probes
+        try:
+          close_probes = list(current_data['Close'].keys())
+          for probe in close_probes:
+              if probe not in intial_data['Close'].keys():
+                  intial_data['Close'][probe] = current_data['Close'][probe]
+        except KeyError:
+          pass
+        try:
+          metro_probes = list(current_data['Metro'].keys())
+          for probe in metro_probes:
+              if probe not in intial_data['Metro'].keys():
+                  intial_data['Metro'][probe] = current_data['Metro'][probe]
+        except KeyError:
+          pass
+
+  new_data = {}
+  for keys in intial_data['Close'].keys():
+    if keys not in new_data.keys():
+        new_data[keys] = intial_data['Close'][keys]
+  for keys in intial_data['Metro'].keys():
+    if keys not in new_data.keys():
+        new_data[keys] = intial_data['Metro'][keys]
+
+  return new_data
+     
 
 def main():
     info_file = 'test_file.txt'
@@ -181,11 +287,12 @@ def main():
         lines = f.readlines()
         lines = [line.strip() for line in lines]
         comp_lines = [line.split('~')[2] for line in lines]
-        
+
     for folder in folders:
       current_path = os.path.join(directory, folder)
       json_path = os.path.join(current_path, 'JSON')
       probe_path = os.path.join(current_path, 'grouped_probes.json')
+      probe_directory = os.path.join(current_path, 'Past_probes')
       #check if Json path exists
       if not os.path.exists(json_path):
           continue
@@ -208,9 +315,10 @@ def main():
                   lat = float(line.split('~')[0].strip())
                   lon = float(line.split('~')[1].strip())
                   break
-      #,probe_path,(lat,lon)
       print(f'Lat: {lat}, Lon: {lon}')
-      data = read_traceroute(folder_names, dest_file)
+      #Load the JSON for all the probes and merge them together and then pass them to the function
+      probe_data = merge_probes(probe_path, probe_directory)
+      data = read_traceroute(folder_names, dest_file, probe_data, (lat,lon))
       dest_folder = os.path.join(current_path, 'Trace_data.json')
       #Check if the folder exists
       with open(dest_folder, 'w') as f:

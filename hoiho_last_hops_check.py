@@ -98,6 +98,7 @@ print(results)
 
 #Creating the hoiho query
 def create_hoiho_query(data):
+    print(data)
     #Assuming the above format "[ips]-[dest_ip-probe]"
     #do a rdns lookup for all of them
 
@@ -125,7 +126,6 @@ def create_hoiho_query(data):
     if response.status_code == 200:
         print("Request was successful.")
         response_data = response.json()
-        print(response_data)
         # Process the response data as needed
         return response_data
     else:

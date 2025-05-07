@@ -164,6 +164,7 @@ def calculate_area(circle, sample_points=100):
 
 if __name__ == "__main__":
     #Grab this from the the trace_data -- tracedata will have information for the top 3 (max) lowest RTT circles
+    #Multi-process this -- turn the following code into a function and then call it for different probes
     circles_data = [
         (37.655395,-122.348219,543.96648),
         (42.236594,-112.758164,543.97000),
@@ -196,34 +197,36 @@ if __name__ == "__main__":
             else:
                 print(f"  Circles: {', '.join(involved_labels)}, No significant intersection found.")
 
+    #Save the above results as JSON in the same folder
+
     # Visualization (plotting circles and intersection centroids)
-    if all_intersections_data or circles_data:
-        fig, ax = plt.subplots()
+    #if all_intersections_data or circles_data:
+    #    fig, ax = plt.subplots()
+    #
+    #    for circle_info in circles_data:
+    #        center_lat, center_long, radius_km = circle_info
+    #        # Approximate circle for plotting
+    #        circle = Point(center_long, center_lat).buffer(radius_km * 0.01)
+    #        x, y = circle.exterior.xy
+    #        ax.plot(x, y, alpha=0.5, label=f"Circle ({center_lat:.2f}, {center_long:.2f})")
+    #        ax.plot(center_long, center_lat, 'o', color='black', markersize=5)  # Mark circle centers
 
-        for circle_info in circles_data:
-            center_lat, center_long, radius_km = circle_info
-            # Approximate circle for plotting
-            circle = Point(center_long, center_lat).buffer(radius_km * 0.01)
-            x, y = circle.exterior.xy
-            ax.plot(x, y, alpha=0.5, label=f"Circle ({center_lat:.2f}, {center_long:.2f})")
-            ax.plot(center_long, center_lat, 'o', color='black', markersize=5)  # Mark circle centers
+    #    for n_circles, intersections in all_intersections_data.items():
+    #        for intersection in intersections:
+    #            center = intersection['centroid']
+    #            labels = intersection['labels']
+    #            ax.plot(center[0], center[1], 'x', markersize=8, label=f'{n_circles} Circles ({", ".join(labels)})') # Mark intersection centroids
 
-        for n_circles, intersections in all_intersections_data.items():
-            for intersection in intersections:
-                center = intersection['centroid']
-                labels = intersection['labels']
-                ax.plot(center[0], center[1], 'x', markersize=8, label=f'{n_circles} Circles ({", ".join(labels)})') # Mark intersection centroids
-
-        ax.set_xlabel("Longitude")
-        ax.set_ylabel("Latitude")
-        ax.set_title("Circles and Approximate Intersection Centers")
-        ax.legend(loc='upper left', bbox_to_anchor=(1, 1))
-        ax.set_aspect('equal', adjustable='box')
-        plt.grid(True)
-        plt.tight_layout()
-        plt.savefig("circles_intersections.png", dpi=300)
-    else:
-        print("\nNo data to visualize.")
+    #    ax.set_xlabel("Longitude")
+    #    ax.set_ylabel("Latitude")
+    #    ax.set_title("Circles and Approximate Intersection Centers")
+    #    ax.legend(loc='upper left', bbox_to_anchor=(1, 1))
+    #    ax.set_aspect('equal', adjustable='box')
+    #    plt.grid(True)
+    #    plt.tight_layout()
+    #    plt.savefig("circles_intersections.png", dpi=300)
+    #else:
+    #    print("\nNo data to visualize.")
 
 
 

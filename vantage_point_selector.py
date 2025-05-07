@@ -292,9 +292,7 @@ metro_group = main_m(c_geolocs,close_keys,c_dense)
 print(f"Metro Group: {len(metro_group)}")
 data['Metro'] = metro_group
 
-#Saving the data -- will rewrite the file
-#TODO: Save the date of the probe selection!!
-#Check if the save folder exists
+#Saving the data
 if not os.path.exists(f'./Library_Static_Data/Results_{library_name}/Past_probes'):
     os.makedirs(f'./Library_Static_Data/Results_{library_name}/Past_probes')
 
