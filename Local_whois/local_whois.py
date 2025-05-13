@@ -16,7 +16,7 @@ input_cidr = "./reverse_geolocation/cidrs_near_library.txt"
 csv_file = "./whois_data/cidr_greater_25.csv"
 #small_cidr_csv_file = Path(__file__).resolve().parent / "small_cidr.csv"
 dat_file = "./whois_data/cidr.dat"
-keyword_file = "./TF-IDF/provider_keywords.txt"
+keyword_file = "./provider_keywords.txt"
 black_list_file = "./Data_set/blacklist.txt"
 state_file = "./Data_set/states.txt"
 

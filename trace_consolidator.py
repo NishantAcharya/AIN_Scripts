@@ -16,6 +16,15 @@ import socket
 import multiprocessing
 import ast
 from geopy.distance import geodesic
+import time
+
+def is_ip_in_cidr(ip, cidr):
+  try:
+    ip_obj = ipaddress.ip_address(ip)
+    network = ipaddress.ip_network(cidr, strict=False)
+    return ip_obj in network
+  except ValueError:
+    return False
 
 def reverse_dns_lookup(ip):
     try:
@@ -47,7 +56,7 @@ def write_lines_to_file(filename, lines):
 
 #This function will read a traceroute and get the IPs in a traceroute, given the a folder_set with the trace data
 #,probe_path, lat_lon
-def read_traceroute(folder_names, dest_file, probe_data, lat_lon):
+def read_traceroute(folder_names, dest_file, probe_data, lat_lon,cidrs):
     data = {}
     data_lines = []
     folder_count = 0
@@ -56,13 +65,47 @@ def read_traceroute(folder_names, dest_file, probe_data, lat_lon):
     ips_t = set()
     for folder in folder_names:
         #Walking through files in the folder
-        files = get_all_files_in_folder(folder)
+        #Will check if the current file IP is in the CIDR list
+        temp = get_all_files_in_folder(folder)
+        dup_selection = {}
+        #Temp check###
+        temp_check = {}
+        ####
+        print(f'Getting File Names in {folder}')
+        for file in tqdm(temp):
+          ip = file.split('-')[1].strip()
+          #Check if the IP is in the CIDR list
+          #If not, skip
+          for cidr in cidrs:
+            #If already found an IP in the current path, skip
+          ###########33
+            try:
+              temp = temp_check[cidr]
+              temp_check[cidr] += 1
+            except KeyError:
+              temp_check[cidr] = 1
+            ###################
+            try:
+              temp = dup_selection[cidr]
+              break
+            except KeyError:
+              pass
+
+            if is_ip_in_cidr(ip, cidr):
+              dup_selection[cidr] = file
+              break
+        print(f'Counts: {temp_check}')
+        files = list(dup_selection.values())
         network_error_count = 0
         for file in tqdm(files):
             folder_count += 1
             if '.json' not in file:
                 weird_count += 1
                 continue
+            #Part 1 - point 3
+            #Check if the file name is in the input_list, if not skip
+            #Use the updated input list here to minimize the number of IPs seen
+            #Add a part to the filtered_ips.txt to address this on a more permannet level
             
             file_path = folder+'/'+file
             with open(file_path, 'r') as f:
@@ -180,7 +223,7 @@ def read_traceroute(folder_names, dest_file, probe_data, lat_lon):
                   prb_item['Last_RTT'] = None
                 
                 try:
-                  item = prb_item['Final_Hop_Differences'][d_key]
+                  temp = prb_item['Final_Hop_Differences'][d_key]
                 except KeyError:
                   prb_item['Final_Hop_Differences'][d_key] = []
                 prb_item['Final_Hop_Differences'][d_key].append(difference)
@@ -225,10 +268,16 @@ def read_traceroute(folder_names, dest_file, probe_data, lat_lon):
             difference_data = ip_data['Last_Hop_Second_Last_Hop_Difference']
             min_difference_data = {}
             for key in difference_data.keys():
-                if len(difference_data[key]) == 1:
-                    min_difference_data[key] = difference_data[key][0]
+                valid_differences = [x for x in difference_data[key] if x is not None]
+                if valid_differences:
+                    temp = min(valid_differences)
+                    if temp < 0:
+                        temp = 0
+                    min_difference_data[key] = temp #The idea is to make sure that if the difference is less than 0, there is no difference
                 else:
-                    min_difference_data[key] = min([x for x in difference_data[key] if x is not None and x > 0])
+                    print(f"Warning: No valid differences for key {key}. Setting to None.")
+                    min_difference_data[key] = None  # Or set a default value, e.g., `math.inf`
+            
             ip_data['Min_lhop_difference'] = min_difference_data
 
 
@@ -238,32 +287,59 @@ def read_traceroute(folder_names, dest_file, probe_data, lat_lon):
               if type(key) != int:
                 continue
               prb_item = ip_data[key]
-              differ_key = list(prb_item['Final_Hop_Differences'].keys())[0]
-              final_hop_differences = prb_item['Final_Hop_Differences'][differ_key][0] # Only 1 value will be here, maybe update in Future?
+              try:
+                differ_key = list(prb_item['Final_Hop_Differences'].keys())[0]
+                final_hop_differences = prb_item['Final_Hop_Differences'][differ_key][0] # Only 1 value will be here, maybe update in Future?
+              except:
+                final_hop_differences = None
+              if final_hop_differences is None:
+                 final_hop_differences = math.inf #None happens when math.inf happens
               if final_hop_differences < 0:
                 #Negative ones are avoided
                 ip_data[key]['Usable_Last_Hop_RTT'] = prb_item['Last_RTT']
                 ip_data[key]['Usable_Last_Hop_IP'] = prb_item['Last_Hop_IP']
                 continue
-              current_hop_differ = ip_data['Min_lhop_difference'][differ_key]
-              if final_hop_differences > current_hop_differ:
-                ip_data[key]['Usable_Last_Hop_RTT'] = prb_item['Second_Last_RTT'] + current_hop_differ
-                ip_data[key]['Usable_Last_Hop_IP'] = prb_item['Last_Hop_IP']
+              try:
+                current_hop_differ = ip_data['Min_lhop_difference'][differ_key]
+              except KeyError:
+                current_hop_differ = None
+              if current_hop_differ is None:
+                current_hop_differ = math.inf #None happens when math.inf happens
+
+              if final_hop_differences != math.inf and current_hop_differ != math.inf:
+                if final_hop_differences > current_hop_differ:
+                  ip_data[key]['Usable_Last_Hop_RTT'] = prb_item['Second_Last_RTT'] + current_hop_differ
+                  ip_data[key]['Usable_Last_Hop_IP'] = prb_item['Last_Hop_IP']
+                else:
+                  ip_data[key]['Usable_Last_Hop_RTT'] = prb_item['Last_RTT']
+                  ip_data[key]['Usable_Last_Hop_IP'] = prb_item['Last_Hop_IP']
               else:
                 ip_data[key]['Usable_Last_Hop_RTT'] = prb_item['Last_RTT']
                 ip_data[key]['Usable_Last_Hop_IP'] = prb_item['Last_Hop_IP']
 
-              #Checking if second last RTT is massively smaller than last RTT
-              distance = prb_item['Distance Destination']
+              #Checking if second last RTT difference is massively smaller than last RTT
+              try:
+                distance = prb_item['Distance Destination']
+              except KeyError:
+                 distance = math.inf
               max_rtt_expected = 14.75 + 0.015 * distance
-              if prb_item['Usable_Last_Hop_RTT'] > max_rtt_expected:
+              temp_s_last = prb_item['Second_Last_RTT']
+              temp_last = prb_item['Last_RTT']
+              if temp_s_last is None:
+                temp_s_last = math.inf
+              if temp_last is None:
+                temp_last = math.inf
+              comp_rtt = temp_last - temp_s_last
+              if comp_rtt is None:
+                comp_rtt = math.inf
+              if comp_rtt > max_rtt_expected:
                 ip_data[key]['Usable_Last_Hop_RTT'] = prb_item['Second_Last_RTT']
                 ip_data[key]['Usable_Last_Hop_IP'] = prb_item['Second_Last_Hop']
 
               ip_data['Last_Hops_final'].append(ip_data[key]['Usable_Last_Hop_IP'])
               
             #Calculate the rdns of the last hop IPs, then do a hoiho reuqest and map the lat,long to domain to probe
-            #If the distance beween the lat,long (this and library) is closer than 25 Km, update the geoloc boolean
+            #If the distance beween the lat,long (this and library) is closer than 40 Km, update the geoloc boolean
             ip_data['Last_Hops_final'] = list(set(ip_data['Last_Hops_final']))
             domains_dict = perform_lookups(ip_data['Last_Hops_final'])
             
@@ -278,23 +354,84 @@ def read_traceroute(folder_names, dest_file, probe_data, lat_lon):
             #Not needed after this
             ip_data['Last_Hops_final'] = domains_dict
             #Querying Hoiho
-            data = domain_list
+            data_hoiho = domain_list
             url = 'https://api.hoiho.caida.org/lookups'
-            response = requests.post(url, json=data)
+            response = requests.post(url, json=data_hoiho)
             if response.status_code == 200:
                 print("Request was successful.")
                 response_data = response.json()
             else:
-                print(f"Request failed with status code: {response.status_code}")
-                print(response.text)
-                reponse_data = None #Make sure you handle this
+                response_data = None #Make sure you handle this
+                time.sleep(5)
 
             #Parsing the response data
-            
+            if response_data is None:
+              domain_loc_map = {}
+            else:
+              try:
+                matches = response_data['matches']
+              except KeyError:
+                matches = []
 
+              if len(matches) == 0:
+                print(f'No matches found for {domain_list}')
+                domain_loc_map = {}
+              else:
+                domain_loc_map = {}
+                for match in matches:
+                  try:
+                    hostname = match['hostname']
+                    lat = float(match['lat'])
+                    lon = float(match['lng'])
+                  except KeyError:
+                    continue
+                  domain_loc_map[hostname] = (lat, lon)
+            
+            #Checking if the lat long is within 40 km of the library -- max radius of a city in US
+            lib_loc = (float(lat_lon[0]), float(lat_lon[1]))
+            for key in ip_data:
+              if type(key) != int:
+                continue
+              prb_item = ip_data[key]
+              try:
+                domain = domains_dict[prb_item['Usable_Last_Hop_IP']]
+                ip_data[key]['Domain'] = domain
+              except KeyError:
+                 print(domains_dict.keys())
+                 print(ip_data['Last_Hops_final'])
+                 print(prb_item['Usable_Last_Hop_IP'])
+                 print(prb_item['Last_Hop_IP'])
+                 domain = None
+                 raise Exception("KeyError: Domain not found")
+              try:
+                domain_loc = domain_loc_map[domain]
+              except KeyError:
+                continue
+              if domain_loc is not None:
+                distance = geodesic(lib_loc, domain_loc).kilometers
+                if distance < 40:
+                  ip_data[key]['Domain_info_close'] = True
                
 
             #Get the smallest rtt probes
+            smallest_rtt_probes = []
+            # Find the probes with the three lowest RTTs
+            rtt_probe_pairs = []
+            for key in ip_data:
+              if isinstance(key, int):  # Ensure the key is a probe ID
+                prb_item = ip_data[key]
+                try:
+                  if prb_item['Usable_Last_Hop_RTT'] is not None and (prb_item['Dest_Replied'] == True or prb_item['Domain_info_close'] == True):
+                    rtt_probe_pairs.append((prb_item['Usable_Last_Hop_RTT'], key))
+                except KeyError:
+                   print(prb_item.keys())
+                   raise Exception("KeyError: Usable_Last_Hop_RTT not found")
+            
+            # Sort by RTT and take the three lowest
+            rtt_probe_pairs.sort()
+            smallest_rtt_probes = [probe_id for _, probe_id in rtt_probe_pairs[:3]]
+            ip_data['Smallest_RTT_Probes'] = smallest_rtt_probes
+
             
             
     write_lines_to_file(dest_file, data_lines)
@@ -348,9 +485,10 @@ def merge_probes(probe_path,probe_directory):
      
 
 def main():
-    info_file = 'test_file.txt'
+    info_file = 'validation_positive.txt'
     directory = './Library_Static_Data/'
     folders = os.listdir(directory)
+    final_folder_file = 'done_show.txt'
     #Compare_name
     with open(info_file, 'r') as f:
         lines = f.readlines()
@@ -358,8 +496,16 @@ def main():
         comp_lines = [line.split('~')[2] for line in lines]
 
     for folder in folders:
+      
       current_path = os.path.join(directory, folder)
       json_path = os.path.join(current_path, 'JSON')
+      
+      #If need be to full restart comment his linen out
+      #final_check = os.path.join(current_path,final_folder_file)
+      #if os.path.exists(final_check):
+      #    print(f'Final check file {final_check} exists, skipping {folder}')
+      #    continue
+      
       probe_path = os.path.join(current_path, 'grouped_probes.json')
       probe_directory = os.path.join(current_path, 'Past_probes')
       #check if Json path exists
@@ -374,6 +520,12 @@ def main():
       name = name.replace('_',' ')
       if name not in comp_lines:
         continue
+
+      final_info_path = os.path.join(current_path, 'total_cidr.txt')
+      with open(final_info_path, 'r') as f:
+        lines = f.readlines()
+        lines = [line.strip() for line in lines]
+        cidr_lines = lines
       print(f'Processing {folder}...')
       #Looking for the lat long values in info_file
       with open(info_file, 'r') as f:
@@ -387,11 +539,16 @@ def main():
       print(f'Lat: {lat}, Lon: {lon}')
       #Load the JSON for all the probes and merge them together and then pass them to the function
       probe_data = merge_probes(probe_path, probe_directory)
-      data = read_traceroute(folder_names, dest_file, probe_data, (lat,lon))
+      data = read_traceroute(folder_names, dest_file, probe_data, (lat,lon),cidr_lines)
       dest_folder = os.path.join(current_path, 'Trace_data.json')
       #Check if the folder exists
       with open(dest_folder, 'w') as f:
           json.dump(data, f, indent=4)
+
+      final_dest_file = os.path.join(current_path, final_folder_file)
+      #Writing the final file
+      with open(final_dest_file, 'a') as f:
+          f.write(f'{folder} - {dest_folder}\n')
 
       #Checking last mile latencies --- THE IDEA
       #Store the second last and last hop IPs as pairs for only the traces whose destination replied (otherwise we can't really say anything for access net)
@@ -402,7 +559,6 @@ def main():
       #Based on this it should not be going further than the neasrest high pop density region
       ## Use burlington's example to say that the last mile latency may be going though the nearest metro region
       ## Assumtion is that the last hop differnce should not be higher than the average RTT between the probe and the destination
-      break
 
 main()
 

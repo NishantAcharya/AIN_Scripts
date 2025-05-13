@@ -163,7 +163,7 @@ def calculate_area(circle, sample_points=100):
     
 
 if __name__ == "__main__":
-    #Grab this from the the trace_data -- tracedata will have information for the top 3 (max) lowest RTT circles
+    #Grab this from the the trace_data -- tracedata will have information for the top 3 (max) lowest RTT circles -- for each library
     #Multi-process this -- turn the following code into a function and then call it for different probes
     circles_data = [
         (37.655395,-122.348219,543.96648),

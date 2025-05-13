@@ -20,7 +20,7 @@ while IFS='~' read -r part1 part2 part3 part4 part5; do
     names+=("$part3")
     state+=("$part4")
     libraries+=("$part5")
-done < ./validation_libraries.txt
+done < ./test.txt
 
 for i in "${!libraries[@]}"; do
     library="${libraries[$i]}"
@@ -42,15 +42,15 @@ for i in "${!libraries[@]}"; do
     stat_file="./outputs/statistic.txt"
 
     # Verify if all files are already in the output directory
-    echo "Checking if Library has been processed..."
-    if [ -d "$output_directory" ] && \
-        [ -e "$output_directory/final_cidrs.txt" ] && \
-        [ -e "$output_directory/all_orgname.txt" ] && \
-        [ -e "$output_directory/after_blacklist_orgname.txt" ] && \
-        [ -e "$output_directory/statistic.txt" ]; then
-         echo "All files are already in $output_directory. Skipping this library."
-         continue
-    fi
+    #echo "Checking if Library has been processed..."
+    #if [ -d "$output_directory" ] && \
+    #    [ -e "$output_directory/final_cidrs.txt" ] && \
+    #    [ -e "$output_directory/all_orgname.txt" ] && \
+    #    [ -e "$output_directory/after_blacklist_orgname.txt" ] && \
+    #    [ -e "$output_directory/statistic.txt" ]; then
+    #     echo "All files are already in $output_directory. Skipping this library."
+    #     continue
+    #fi
 
 
 

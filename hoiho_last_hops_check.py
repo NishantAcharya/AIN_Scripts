@@ -98,7 +98,6 @@ print(results)
 
 #Creating the hoiho query
 def create_hoiho_query(data):
-    print(data)
     #Assuming the above format "[ips]-[dest_ip-probe]"
     #do a rdns lookup for all of them
 
@@ -137,6 +136,7 @@ def create_hoiho_query(data):
     return None
                 
                 
-create_hoiho_query(final[:3])
+x = create_hoiho_query(final[:3])
+print(x)
 
 ###PARSE THE HOIHO RESULTS

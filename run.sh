@@ -36,13 +36,15 @@ for i in "${!libraries[@]}"; do
 
     #Filter CIDR
     #Check if filtered_Ips.txt exists, only run if it doesn't
-    #echo "Getting filtered IPs..."
-    python3 ./residential_remover.py ./Library_Static_Data/Results_"$name"/final_cidrs.txt ./Library_Static_Data/Results_"$name"/filtered_ips.txt ./Library_Static_Data/Results_"$name"/hitlist_count.txt
+    echo "Getting filtered IPs..."
+    #python3 ./residential_remover.py ./Library_Static_Data/Results_"$name"/final_cidrs.txt ./Library_Static_Data/Results_"$name"/filtered_ips.txt ./Library_Static_Data/Results_"$name"/hitlist_count.txt
     #Read the final_cidr.text file based on the correct directory and then add the directory name to the file, after the CIDR
     #Then add the data to common inpt.txt file in the root folder
+    echo "Removing duplicates..."
+    python3 ./duplicate_remover.py ./Library_Static_Data/Results_"$name"/filtered_ips.txt ./Library_Static_Data/Results_"$name"/filtered_dup_removed.txt ./Library_Static_Data/Results_"$name"/total_cidr.txt
 
     echo "Finding Vantage Points..."
-    python3 ./vantage_point_selector.py "$name" "$lan" "$lon" "$state"
+    #python3 ./vantage_point_selector.py "$name" "$lan" "$lon" "$state"
 done
 
 #Creating the input file, producer file, consumer file and download file

@@ -54,10 +54,10 @@ for folder in os.listdir(directory):
     if os.path.isdir(os.path.join(directory, folder)) and folder in selected_libs:
         input_folders.append(folder)
 
-#From each folder copy the filtered_ips.txt
+#From each folder copy the filtered_dup_removed.txt
 inpts = []
 for folder in input_folders:
-    path = os.path.join(directory, folder, 'filtered_ips.txt')
+    path = os.path.join(directory, folder, 'filtered_dup_removed.txt')
     if os.path.exists(path):
         with open(path, 'r') as f:
             lines = f.readlines()
@@ -120,10 +120,10 @@ for folder in os.listdir(directory):
     if os.path.isdir(os.path.join(directory, folder)) and folder in selected_libs:
         input_folders.append(folder)
 
-#From each folder copy the filtered_ips.txt
+#From each folder copy the filtered_dup_removed.txt
 inpts = []
 for folder in input_folders:
-    path = os.path.join(directory, folder, 'filtered_ips.txt')
+    path = os.path.join(directory, folder, 'filtered_dup_removed.txt')
     if os.path.exists(path):
         with open(path, 'r') as f:
             lines = f.readlines()
@@ -190,10 +190,10 @@ for folder in os.listdir(directory):
     if os.path.isdir(os.path.join(directory, folder)) and folder in selected_libs:
         input_folders.append(folder)
 
-#From each folder copy the filtered_ips.txt
+#From each folder copy the filtered_dup_removed.txt
 inpts = []
 for folder in input_folders:
-    path = os.path.join(directory, folder, 'filtered_ips.txt')
+    path = os.path.join(directory, folder, 'filtered_dup_removed.txt')
     if os.path.exists(path):
         with open(path, 'r') as f:
             lines = f.readlines()
@@ -208,7 +208,7 @@ with open('input_nish_2.txt', 'w') as f:
 
 #########################Running a 4th time -- validation IPs
 directory = './Library_Static_Data/'
-input_file = './validation_libraries.txt'
+input_file = './validation_positive.txt'
 with open(input_file, 'r') as f:
     lines = f.readlines()
     val_libs = [line.strip().split('~')[2].strip() for line in lines]
@@ -231,8 +231,8 @@ with open('Selected_libraries_nish_2.txt', 'r') as f:
 for i in range(len(val_libs)):
 
     name = val_libs[i]
-    if name in selected_libs_alex or name in selected_libs_done or name in selected_libs_nish or name in selected_libs_nish_2:
-        continue
+    #if name in selected_libs_alex or name in selected_libs_done or name in selected_libs_nish or name in selected_libs_nish_2:
+    #    continue
 
     name = f"Results_{name.strip().replace(' ','_')}"
     print(name)
@@ -248,10 +248,10 @@ for folder in os.listdir(directory):
     if os.path.isdir(os.path.join(directory, folder)) and folder in selected_libs:
         input_folders.append(folder)
 
-#From each folder copy the filtered_ips.txt
+#From each folder copy the filtered_dup_removed.txt
 inpts = []
 for folder in input_folders:
-    path = os.path.join(directory, folder, 'filtered_ips.txt')
+    path = os.path.join(directory, folder, 'filtered_dup_removed.txt')
     print(path)
     if os.path.exists(path):
         with open(path, 'r') as f:
@@ -261,6 +261,6 @@ for folder in input_folders:
             inpts.extend(lines)
 
 
-with open('input_val.txt', 'w') as f:
+with open('input_val_alex.txt', 'w') as f:
     for line in tqdm(inpts):
         f.write(line + '\n')
