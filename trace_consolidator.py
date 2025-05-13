@@ -63,49 +63,39 @@ def read_traceroute(folder_names, dest_file, probe_data, lat_lon,cidrs):
     weird_count = 0
     data_count = 0
     ips_t = set()
+    dup_selection = {}
     for folder in folder_names:
         #Walking through files in the folder
         #Will check if the current file IP is in the CIDR list
         temp = get_all_files_in_folder(folder)
         dup_selection = {}
-        #Temp check###
-        temp_check = {}
-        ####
         print(f'Getting File Names in {folder}')
-        for file in tqdm(temp):
-          ip = file.split('-')[1].strip()
-          #Check if the IP is in the CIDR list
-          #If not, skip
-          for cidr in cidrs:
-            #If already found an IP in the current path, skip
-          ###########33
+        temp2 = [file.split('-')[-1].split('.json')[0].replace('?','/').strip() for file in temp]
+        #find overlap with the CIDR list
+        overlap = {}
+        print('Finding the overlap')
+        for cidr in temp2:
+            if cidr in cidrs:
+                overlap[cidr] = True
+        print('Processing the files')
+        for i in range(len(temp2)):
             try:
-              temp = temp_check[cidr]
-              temp_check[cidr] += 1
+              check = overlap[temp2[i]]
             except KeyError:
-              temp_check[cidr] = 1
-            ###################
-            try:
-              temp = dup_selection[cidr]
-              break
-            except KeyError:
-              pass
+               check = False
+            if check:
+                #Check if the CIDR is already in the list
+                try:
+                    _ = dup_selection[temp2[i]]
+                except KeyError:
+                    dup_selection[temp2[i]] = temp[i]
 
-            if is_ip_in_cidr(ip, cidr):
-              dup_selection[cidr] = file
-              break
-        print(f'Counts: {temp_check}')
         files = list(dup_selection.values())
         network_error_count = 0
         for file in tqdm(files):
             folder_count += 1
             if '.json' not in file:
                 weird_count += 1
-                continue
-            #Part 1 - point 3
-            #Check if the file name is in the input_list, if not skip
-            #Use the updated input list here to minimize the number of IPs seen
-            #Add a part to the filtered_ips.txt to address this on a more permannet level
             
             file_path = folder+'/'+file
             with open(file_path, 'r') as f:
@@ -275,7 +265,7 @@ def read_traceroute(folder_names, dest_file, probe_data, lat_lon,cidrs):
                         temp = 0
                     min_difference_data[key] = temp #The idea is to make sure that if the difference is less than 0, there is no difference
                 else:
-                    print(f"Warning: No valid differences for key {key}. Setting to None.")
+                    #print(f"Warning: No valid differences for key {key}. Setting to None.")
                     min_difference_data[key] = None  # Or set a default value, e.g., `math.inf`
             
             ip_data['Min_lhop_difference'] = min_difference_data
@@ -284,9 +274,11 @@ def read_traceroute(folder_names, dest_file, probe_data, lat_lon,cidrs):
             #Going over the probes, and updating the usable_last hop IP
             #If the difference is more than distance*0.001 + 14.75, then use the second last hop RTT
             for key in ip_data:
+              
               if type(key) != int:
                 continue
               prb_item = ip_data[key]
+
               try:
                 differ_key = list(prb_item['Final_Hop_Differences'].keys())[0]
                 final_hop_differences = prb_item['Final_Hop_Differences'][differ_key][0] # Only 1 value will be here, maybe update in Future?
@@ -298,14 +290,16 @@ def read_traceroute(folder_names, dest_file, probe_data, lat_lon,cidrs):
                 #Negative ones are avoided
                 ip_data[key]['Usable_Last_Hop_RTT'] = prb_item['Last_RTT']
                 ip_data[key]['Usable_Last_Hop_IP'] = prb_item['Last_Hop_IP']
+                ip_data['Last_Hops_final'].append(ip_data[key]['Usable_Last_Hop_IP'])
                 continue
+              ############### Checking if the last hop difference is less than the second last hop difference
               try:
                 current_hop_differ = ip_data['Min_lhop_difference'][differ_key]
               except KeyError:
                 current_hop_differ = None
               if current_hop_differ is None:
                 current_hop_differ = math.inf #None happens when math.inf happens
-
+              
               if final_hop_differences != math.inf and current_hop_differ != math.inf:
                 if final_hop_differences > current_hop_differ:
                   ip_data[key]['Usable_Last_Hop_RTT'] = prb_item['Second_Last_RTT'] + current_hop_differ
@@ -335,7 +329,7 @@ def read_traceroute(folder_names, dest_file, probe_data, lat_lon,cidrs):
               if comp_rtt > max_rtt_expected:
                 ip_data[key]['Usable_Last_Hop_RTT'] = prb_item['Second_Last_RTT']
                 ip_data[key]['Usable_Last_Hop_IP'] = prb_item['Second_Last_Hop']
-
+              
               ip_data['Last_Hops_final'].append(ip_data[key]['Usable_Last_Hop_IP'])
               
             #Calculate the rdns of the last hop IPs, then do a hoiho reuqest and map the lat,long to domain to probe
@@ -358,7 +352,7 @@ def read_traceroute(folder_names, dest_file, probe_data, lat_lon,cidrs):
             url = 'https://api.hoiho.caida.org/lookups'
             response = requests.post(url, json=data_hoiho)
             if response.status_code == 200:
-                print("Request was successful.")
+                #print("Request was successful.")
                 response_data = response.json()
             else:
                 response_data = None #Make sure you handle this
@@ -374,7 +368,7 @@ def read_traceroute(folder_names, dest_file, probe_data, lat_lon,cidrs):
                 matches = []
 
               if len(matches) == 0:
-                print(f'No matches found for {domain_list}')
+                #print(f'No matches found for {domain_list}')
                 domain_loc_map = {}
               else:
                 domain_loc_map = {}
@@ -401,6 +395,7 @@ def read_traceroute(folder_names, dest_file, probe_data, lat_lon,cidrs):
                  print(ip_data['Last_Hops_final'])
                  print(prb_item['Usable_Last_Hop_IP'])
                  print(prb_item['Last_Hop_IP'])
+                 print(prb_item['Second_Last_Hop'])
                  domain = None
                  raise Exception("KeyError: Domain not found")
               try:
@@ -431,9 +426,7 @@ def read_traceroute(folder_names, dest_file, probe_data, lat_lon,cidrs):
             rtt_probe_pairs.sort()
             smallest_rtt_probes = [probe_id for _, probe_id in rtt_probe_pairs[:3]]
             ip_data['Smallest_RTT_Probes'] = smallest_rtt_probes
-
-            
-            
+      
     write_lines_to_file(dest_file, data_lines)
     print(f'Network Errors: {network_error_count}')
     print(f'Folder Count: {folder_count}')
@@ -485,7 +478,7 @@ def merge_probes(probe_path,probe_directory):
      
 
 def main():
-    info_file = 'validation_positive.txt'
+    info_file = 'validation_libraries.txt'
     directory = './Library_Static_Data/'
     folders = os.listdir(directory)
     final_folder_file = 'done_show.txt'
@@ -521,10 +514,10 @@ def main():
       if name not in comp_lines:
         continue
 
-      final_info_path = os.path.join(current_path, 'total_cidr.txt')
+      final_info_path = os.path.join(current_path, 'filtered_dup_removed.txt')
       with open(final_info_path, 'r') as f:
         lines = f.readlines()
-        lines = [line.strip() for line in lines]
+        lines = [line.strip().split('-')[1] for line in lines]
         cidr_lines = lines
       print(f'Processing {folder}...')
       #Looking for the lat long values in info_file
