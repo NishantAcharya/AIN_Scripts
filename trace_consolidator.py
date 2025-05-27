@@ -186,9 +186,11 @@ def read_traceroute(folder_names, dest_file, probe_data, lat_lon,cidrs):
                         second_last_rtt = math.inf
                       else:
                         second_last_rtt = prb_item['RTTs'][i-1]
+                        if second_last_rtt == '*':
+                          second_last_rtt = math.inf
                       break
                 prb_item['Second_Last_Hop'] = second_last_hop
-                prb_item['Second_Last_RTT'] = second_last_rtt
+                prb_item['Second_Last_RTT'] = float(second_last_rtt)
                 
                 #Saving RTT differences between the final two hops -- slightly crude since we don't check for full networks
                 difference = math.inf
@@ -323,7 +325,11 @@ def read_traceroute(folder_names, dest_file, probe_data, lat_lon,cidrs):
                 temp_s_last = math.inf
               if temp_last is None:
                 temp_last = math.inf
-              comp_rtt = temp_last - temp_s_last
+              try:
+                comp_rtt = temp_last - temp_s_last
+              except:
+                 print(f"Error: {temp_last} - {temp_s_last}")
+                 raise Exception("Error: RTT calculation failed")
               if comp_rtt is None:
                 comp_rtt = math.inf
               if comp_rtt > max_rtt_expected:

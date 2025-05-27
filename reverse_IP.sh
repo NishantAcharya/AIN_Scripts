@@ -20,7 +20,16 @@ while IFS='~' read -r part1 part2 part3 part4 part5; do
     names+=("$part3")
     state+=("$part4")
     libraries+=("$part5")
-done < ./test.txt
+done < ./validation_libraries.txt
+
+#Check if comparision.txt exists, if not, create it
+if [ ! -e ./comparision.txt ]; then
+    echo "Creating comparision.txt"
+    touch ./comparision.txt
+else
+    echo "comparision.txt already exists, clearing its content"
+    > ./comparision.txt
+fi
 
 for i in "${!libraries[@]}"; do
     library="${libraries[$i]}"
@@ -149,6 +158,22 @@ for i in "${!libraries[@]}"; do
     if [ -e "$stat_file" ]; then
         mv "$stat_file" ./Library_Static_Data/Results_"$name"/
         echo "Moved $stat_file to ./Library_Static_Data/Results_$name/"
+    fi
+
+    if [ -e "./Library_Static_Data/Results_$name/statistic.txt" ]; then
+        {
+            echo "$name -- New Results"
+            cat "./Library_Static_Data/Results_$name/statistic.txt"
+            echo ""
+        } >> ./comparision.txt
+    fi
+
+    if [ -e "./Library_Static_Data_og/Results_$name/statistic.txt" ]; then
+        {
+            echo "$name -- Old Results"
+            cat "./Library_Static_Data_og/Results_$name/statistic.txt"
+            echo "----------------------------"
+        } >> ./comparision.txt
     fi
 
 done

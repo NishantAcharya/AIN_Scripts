@@ -208,7 +208,7 @@ with open('input_nish_2.txt', 'w') as f:
 
 #########################Running a 4th time -- validation IPs
 directory = './Library_Static_Data/'
-input_file = './validation_positive.txt'
+input_file = './validation_libs_left.txt'
 with open(input_file, 'r') as f:
     lines = f.readlines()
     val_libs = [line.strip().split('~')[2].strip() for line in lines]
@@ -261,6 +261,6 @@ for folder in input_folders:
             inpts.extend(lines)
 
 
-with open('input_val_alex.txt', 'w') as f:
+with open('input_val_left.txt', 'w') as f:
     for line in tqdm(inpts):
         f.write(line + '\n')

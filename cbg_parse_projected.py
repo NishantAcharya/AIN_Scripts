@@ -1,233 +1,334 @@
-from geopy.distance import geodesic, great_circle #To get the best approximation
-from shapely.geometry import Point, Polygon #Polygon operations
-import json
-import os
-import sys
+from geopy.distance import geodesic
+from shapely.geometry import Polygon
 from shapely.ops import transform
 import pyproj
 import numpy as np
-import math
 from itertools import combinations
 import matplotlib.pyplot as plt
+from typing import List, Tuple, Optional
+import multiprocessing
+import os
+import sys
+import json
+import ipaddress
+import ast
+from tqdm import tqdm
+class Circle:
+    def __init__(self, center: Tuple[float, float], radius: float):
+        self.center = center
+        self.radius = radius
 
-#HELPERS
-#All distance is in KM
-#All arrays convert them to np arrays for simplicity
-#Check if a point is within a circle -- to check for intersection with a polygon
-def is_in(d_lat,d_lon,c_lat,c_lon,rad):
-    return geodesic((d_lat, d_lon), (c_lat, c_lon)).km <= rad
+def create_geodesic_circle(lat, lon, radius, n=360):
+    geod = pyproj.Geod(ellps='WGS84')
+    points = [geod.fwd(lon, lat, angle, radius)[:2] for angle in np.linspace(0, 360, n, False)]
+    return Polygon(points)
 
-#Edge case --  when circles intersect at 1 point, return the point as appoximating that is hard
-def single_point_case(x1,y1,r1,x2,y2,r2):
-    # Calculate the distance between the centers
-    d = geodesic((x1, y1), (x2, y2)).km
+def poly_intersection(polys):
+    if not polys: return None
+    intersection = polys[0]
+    for p in polys[1:]: intersection = intersection.intersection(p)
+    return intersection if not intersection.is_empty else None
 
-    # Check if the circles touch at one point
-    #return d == r1 + r2 or d == abs(r1 - r2)
-    #Floating point precision error can happen above -- use np.isclose
-    return np.isclose(d, r1 + r2, atol=1e-5) or np.isclose(d, abs(r1 - r2), atol=1e-5)
+def project_poly(poly):
+    if poly.is_empty: return None, None, None
+    lon, lat = poly.centroid.x, poly.centroid.y
+    utm_crs = pyproj.CRS.from_epsg(32600 + int((lon + 180) / 6) + (100 * (lat >= 0)))
+    project = pyproj.Transformer.from_crs("EPSG:4326", utm_crs, always_xy=True).transform
+    inv_project = pyproj.Transformer.from_crs(utm_crs, "EPSG:4326", always_xy=True).transform
+    projected_poly = transform(project, poly)
+    centroid_proj = inv_project(*projected_poly.centroid.xy)
+    return projected_poly, centroid_proj, utm_crs
 
-#Given a set of circles, find all the possible iterative intersections
-def find_n_circle_intersection(circles, n, s_density):
-    #Error check
-    if n < 2:
-        raise ValueError("The number of circles needs to be 2 at least")
-    elif n > len(circles):
-        raise ValueError("Too many intersections requested")
-    
-    centeroids_circles = []
-    areas_intersection = []
-    indicies_intersection = []
+def get_area(poly):
+    return project_poly(poly)[0].area if poly and not poly.is_empty else None
 
-    #Use the GPS coordinate system
-    projection = pyproj.CRS("EPSG:4326")
+def find_max_intersect(circles):
+    n = len(circles)
+    geos = [create_geodesic_circle(*c.center, c.radius) for c in circles]
+    max_intersect_poly, max_count, max_indices = None, 0, tuple()
+    for i in range(1, n + 1):
+        for indices in combinations(range(n), i):
+            intersect = poly_intersection([geos[j] for j in indices])
+            if intersect and i > max_count:
+                max_count, max_intersect_poly, max_indices = i, intersect, tuple(sorted(indices))
+    return max_intersect_poly, max_count, max_indices, geos
 
-    #Need a way to project the circles to a flat plane
-    #Using UTM? --> Why? Better for spatial analysis -- needed for area analysis in the end
-    #UTM also changes based on the lat long -- keep it the same for US but need to change it later
-    #utm_zone = 10 #Change between 10-19 across the states
+def check_overlap_with_new_circle(max_poly: Polygon, new_circle: Circle) -> Optional[Polygon]:
+    if not max_poly:
+        return None
+    new_circle_geo = create_geodesic_circle(*new_circle.center, new_circle.radius)
+    overlap = poly_intersection([max_poly, new_circle_geo])
+    return overlap
 
-    #All the circles are ~ going to be in the same zone -- edge case where they can be different
-    #Circle -- (lat, lon, radius)
-    lon_appox = np.mean([circle[1] for circle in circles])
-
-    #Use the approx lat for projection -- can lead to shape issues on edge cases
-    #EPSG codes start from 3600 for north and 3700 for south
-    #+ 180 to deal with -ve values
-    utm_zone = int((math.floor(lon_appox) + 180)/6) + 1
-
-    try:
-        utm_proj = pyproj.CRS(f"EPSG:326{utm_zone}")
-        projected_lat_lon = pyproj.Transformer.from_crs(projection, utm_proj, always_xy=True).transform
-    except pyproj.exceptions.CRSError as e:
-        #Some error in the CRS code -- since we will be using the closest 3 RTT circles
-        print(f"Invalid CRS Code: {e}")
-        return [], [], []
-    
-    #Get per n intersections -- we only care about till 3
-    for indices in combinations(range(len(circles)), n):
-        selected_circles = [circles[i] for i in indices]
-
-        #Handling edge case -- any more than 3 circles intersecting is very hard to manage
-        if n == 2 and single_point_case(selected_circles[0][0], selected_circles[0][1], selected_circles[0][2], selected_circles[1][0], selected_circles[1][1], selected_circles[1][2]):
-            centroid_1 = (selected_circles[0][0], selected_circles[0][1])
-            centroid_2 = (selected_circles[1][0], selected_circles[1][1])
-            #Getting the mid point between the two circles -- appox intersection
-            mid_point = ((centroid_1[0] + centroid_2[0]) / 2, (centroid_1[1] + centroid_2[1]) / 2)
-            centeroids_circles.append(mid_point)
-            areas_intersection.append(0.0)
-            indicies_intersection.append(list(indices))
-            continue
-
-        #For other cases -- if >= 3 touch points are found -- we ignore them due to complexity
-        #To approximate the circle we will sample points
-        #Getting the range for sampling
-
-        #Offset the km to degrees
-        min_lat = min([circle[0] - circle[2]*0.015 for circle in selected_circles])
-        max_lat = max([circle[0] + circle[2]*0.015 for circle in selected_circles])
-        min_lon = min([circle[1] - circle[2]*0.015 for circle in selected_circles])
-        max_lon = max([circle[1] + circle[2]*0.015 for circle in selected_circles])
-
-        #Sample points
-        sampled_lat_circle = np.linspace(min_lat, max_lat, s_density)
-        sampled_lon_circle = np.linspace(min_lon, max_lon, s_density)
-
-        intersections = []
-        for lat in sampled_lat_circle:
-            for lon in sampled_lon_circle:
-                #Check if the point is inside all the circles
-                if all(is_in(lat, lon, circle[0], circle[1], circle[2]) for circle in selected_circles):
-                    intersections.append((lon, lat))
-
-        if len(intersections) < 3:
-            # Not enough points to form a polygon -- skip
-            centeroids_circles.append(None)
-            areas_intersection.append(0.0)
-            indicies_intersection.append(list(indices))
-            continue
-        try:
-            circle_polygon = Polygon(intersections).convex_hull
-            projected_polygon = transform(projected_lat_lon, circle_polygon)
-            area_approximated = projected_polygon.area / 1000000.0  # Convert to KM^2
-        except Exception as e:
-            print(f"Error creating polygon: {e}")
-            centeroids_circles.append(None)
-            areas_intersection.append(0.0)
-            indicies_intersection.append(list(indices))
-            continue
-
-        #Getting the centroid of the intersection
-        lon_coordinates = [point[0] for point in intersections]
-        lat_coordinates = [point[1] for point in intersections]
-        centroid_lat = np.mean(lat_coordinates)
-        centroid_lon = np.mean(lon_coordinates)
-        centroid = (centroid_lon, centroid_lat)
-
-        centeroids_circles.append(centroid)
-        areas_intersection.append(area_approximated)
-        indicies_intersection.append(list(indices))
-
-    return centeroids_circles, areas_intersection, indicies_intersection
-
-#The area of the porjected-distored circle calculation
-def calculate_area(circle, sample_points=100):
-    lat, lon, radius = circle
-
-    projection_circle = pyproj.CRS("EPSG:4326")
-    utm_zone = int(math.floor(lon + 180) / 6) + 1
-
-    try:
-        utm_proj = pyproj.CRS(f"EPSG:326{utm_zone}")
-        projected_lat_lon = pyproj.Transformer.from_crs(projection_circle, utm_proj, always_xy=True).transform
-    except pyproj.exceptions.CRSError as e:
-        #Some error in the CRS code -- since we will be using the closest 3 RTT circles
-        print(f"Invalid CRS Code: {e}")
-        return 0.0
-    
-    angles = np.linspace(0,360, sample_points, endpoint=False)
-    boundary_points = []
-    for angle in angles:
-        gc = great_circle(kilometers=radius)
-        point = gc.destination((lat, lon), angle)
-        boundary_points.append((point.longitude, point.latitude))
-
-    if boundary_points:
-        polygon = Polygon(boundary_points)
-        projected_polygon = transform(projected_lat_lon, polygon)
-        area = projected_polygon.area / 1000000.0
-        centroid = (lon, lat)
-        return centroid, area
+def plot_results(circles, max_poly, max_indices, overlap_with_new=None, new_circle=None, utm_crs=None):
+    fig, ax = plt.subplots(figsize=(10, 10))
+    if utm_crs:
+        project = pyproj.Transformer.from_crs("EPSG:4326", utm_crs, always_xy=True).transform
     else:
-        return None, 0.0
+        project = lambda x: x  # Identity if no projection
+
+    for i, c in enumerate(circles):
+        poly = create_geodesic_circle(*c.center, c.radius)
+        px, py = transform(project, poly).exterior.xy
+        ax.plot(px, py, label=f'Circle {i}')
+
+    if max_poly:
+        px_max, py_max = transform(project, max_poly).exterior.xy
+        ax.fill(px_max, py_max, color='red', alpha=0.5, label=f'Max Intersection ({len(max_indices)} circles)')
+
+    if overlap_with_new and new_circle:
+        new_circle_geo = create_geodesic_circle(*new_circle.center, new_circle.radius)
+        px_new, py_new = transform(project, new_circle_geo).exterior.xy
+        ax.plot(px_new, py_new, '--g', label=f'New Circle (Overlap Check)')
+        px_overlap, py_overlap = transform(project, overlap_with_new).exterior.xy
+        ax.fill(px_overlap, py_overlap, color='blue', alpha=0.5, label='Overlap with New Circle')
+
+    ax.set_xlabel(f"Easting ({utm_crs.name})" if utm_crs else "Longitude")
+    ax.set_ylabel(f"Northing ({utm_crs.name})" if utm_crs else "Latitude")
+    ax.set_title("Circle Intersections and Overlap with New Circle")
+    ax.legend()
+    ax.set_aspect('equal', adjustable='box')
+    ax.grid(True)
+    plt.show()
+
+# Function to convert IP to /mask
+def apply_netmask(ip, mask):
+    return str(ipaddress.ip_network(f"{ip}/{mask}", strict=False))
+
+def is_ip_in_cidr(ip, cidr):
+  try:
+    ip_obj = ipaddress.ip_address(ip)
+    network = ipaddress.ip_network(cidr, strict=False)
+    return ip_obj in network
+  except ValueError:
+    return False
+
+
+#Folder for the multi_process
+def process_cbg_data(trace_folder_name,graph_folder_name,outfile_name):
+    process_name = multiprocessing.current_process().name
+    mask = 26
+    print(f"Process {process_name} is processing data for folder: {trace_folder_name}")
+    #CIDR file path
+    cidr_file_path = f"./Library_Static_Data/{trace_folder_name}/filtered_dup_removed.txt"
+    #Output file path
+    output_file_path = f"./Library_Static_Data/{trace_folder_name}/{outfile_name}"
+    #Graph file path
+    graph_file_path = f"./Library_Static_Data/{trace_folder_name}/{graph_folder_name}/"
+    #Trace data file path
+    trace_data_file_path = f"./Library_Static_Data/{trace_folder_name}/Trace_data.json"
+    #Meta info path
+    meta_info_file_path = f"./Library_Static_Data/{trace_folder_name}/Meta_info.txt"
+    #Meta info#####
+    didnt_reach_target = 0
+    single_probe_no_overlap = 0
+    single_probe_overlap = 0
+    multiple_probe_no_overlap = 0
+    multiple_probe_overlap = 0
+    total = 0
+    ambigious_count = 0
+    target_ip_cidrs = 0
+    #Meta Info end#####
+
+    #Checking if the trace data file exists
+    if not os.path.exists(trace_data_file_path):
+        print(f"Trace data file '{trace_data_file_path}' does not exist. Skipping folder: {trace_folder_name}")
+        return
+    
+    #Duplicate the trace data file
+    trace_data_copy_path = f"./Library_Static_Data/{trace_folder_name}/Trace_data_copy.json"
+    with open(trace_data_file_path, 'r') as f:
+        data = json.load(f)
+    with open(trace_data_copy_path, 'w') as f:
+        json.dump(data, f)
+
+    #Processing the trace data
+    confirmed_ips = []
+    for ip in tqdm(data.keys()):
+        smallest_rtt_probes = data[ip]['Smallest_RTT_Probes']
+        total += 1
+        ambigious = False
+        if len(smallest_rtt_probes) == 0:
+            didnt_reach_target += 1
+            continue
+        elif len(smallest_rtt_probes) == 1:
+            target_circle_data = ((data[ip]['Lat'],data[ip]['Lon']), 40000) #Radius in meters -- 40Km
+            probe = str(smallest_rtt_probes[0])
+            rtt = data[ip][probe]['Usable_Last_Hop_RTT']
+
+            lat_long = (float(data[ip][probe]['Lat,Long'][0]), float(data[ip][probe]['Lat,Long'][1]))
+            distance = data[ip][probe]['Distance Destination']*1000 #Convert to meters
+
+            #IF distance is > 40 km use the RTT formula else use the SoL constraints
+            if distance <= 40000:
+                sol_radius = (rtt/0.01)*1000
+                if distance > sol_radius:
+                    ambigious = True
+                    radius = -1
+                else:
+                    radius = sol_radius
+            #IF distance > 40 KM but RTT is between 14.75 and 2.75 -- use the above formula
+            else:
+                sol_radius = (rtt/0.01)*1000
+                if distance > sol_radius:
+                    ambigious = True
+                    radius = -1
+                else:
+                    if rtt <= 14.75:
+                            radius = sol_radius
+                    else:
+                        max_radius = ((rtt - 14.75 + 12)/0.015)*1000
+                        radius = max_radius
+
+            
+            input_circle_data = (lat_long, radius)
+            # Create the target circle and input circle
+            if ambigious:
+                ambigious_count += 1
+                continue
+            target_circle = Circle(center=target_circle_data[0], radius=target_circle_data[1])
+            input_circle = Circle(center=input_circle_data[0], radius=input_circle_data[1])
+
+            # Find the overlap between the target circle and input circle
+            overlap = check_overlap_with_new_circle(create_geodesic_circle(*target_circle.center, target_circle.radius), input_circle)
+            # If there is an overlap, process it further
+            if overlap and not overlap.is_empty:
+                overlap_area = get_area(overlap)
+                single_probe_overlap += 1
+                confirmed_ips.append(ip)
+            else:
+                single_probe_no_overlap += 1
+                continue
+        else:
+            target_circle_data = ((data[ip]['Lat'],data[ip]['Lon']), 40000) #Radius in meters -- 40Km
+            probes = smallest_rtt_probes
+            circles = []
+            #Collecting circle data
+            for probe in probes:
+                probe_key = str(probe)
+                rtt = data[ip][probe_key]['Usable_Last_Hop_RTT']
+                lat_long = (float(data[ip][probe_key]['Lat,Long'][0]), float(data[ip][probe_key]['Lat,Long'][1]))
+                distance = data[ip][probe_key]['Distance Destination']*1000 #Convert to meters
+                #IF distance is > 40 km use the RTT formula else use the SoL constraints
+                if distance <= 40000:
+                    sol_radius = (rtt/0.01)*1000 # 1ms/KM roughly
+                    if distance > sol_radius:
+                        ambigious = True
+                        radius = -1
+                    else:
+                        radius = sol_radius
+                #IF distance > 40 KM byut RTT is between 14.75 and 2.75 -- use the above formula
+                else:
+                    sol_radius = (rtt/0.01)*1000 # 1ms/KM roughly
+                    if distance > sol_radius:
+                            ambigious = True
+                            radius = -1
+                    else:
+                        if rtt <= 14.75:
+                            radius = sol_radius
+                        else:
+                            max_radius = ((rtt - 14.75 + 12)/0.015)*1000
+                            radius = max_radius
+                    
+                circle = Circle(center=lat_long, radius=radius)
+                circles.append(circle)
+            
+            #Found a single probe for the IP that violated SoL constraints -- discarding this IP
+            if ambigious:
+                ambigious_count += 1
+                continue
+            #Processing interesection and overlap
+            target_circle = Circle(center=target_circle_data[0], radius=target_circle_data[1])
+            max_poly, max_count, max_indices, geos = find_max_intersect(circles)
+            if max_poly:
+                projected_poly, centroid_proj, utm_crs = project_poly(max_poly)
+                area = get_area(max_poly)
+                if(ip == "64.40.217.1"):
+                    print("Debugging")
+                    print(area)
+                    print(target_circle.center, target_circle.radius)
+                    print([(c.center, c.radius) for  c in circles])
+                    print(probes)
+                    plot_results(circles, max_poly, max_indices, overlap_with_new, target_circle, utm_crs)  
+                
+                overlap_with_new = check_overlap_with_new_circle(max_poly, target_circle)
+
+                if overlap_with_new:
+                    overlap_area = get_area(overlap_with_new)
+                    multiple_probe_overlap += 1
+                    confirmed_ips.append(ip)
+                else:
+                    multiple_probe_no_overlap += 1
+
     
 
-if __name__ == "__main__":
-    #Grab this from the the trace_data -- tracedata will have information for the top 3 (max) lowest RTT circles -- for each library
-    #Multi-process this -- turn the following code into a function and then call it for different probes
-    circles_data = [
-        (37.655395,-122.348219,543.96648),
-        (42.236594,-112.758164,543.97000),
-        (34.318702,-114.191737,543.97000),
-        (34.208614, -108.168081,543.97000)
-    ]
-    #These will be the probe_ids
-    circle_label = ['Circle 1', 'Circle 2', 'Circle 3', 'Circle 4']
-    #If there is only 1 circle, we use that circle's info 
-    num_circles = len(circles_data)
-    all_intersections_data = {}
 
-    print("\n--- Input Circles ---")
-    for i in range(len(circles_data)):
-        circle = circles_data[i]
-        cl = circle_label[i]
-        centroid, area = calculate_area(circle)
-        print(f"Circle: {cl}, Centroid: (Lat: {centroid[0]:.4f}, Lon: {centroid[1]:.4f}), Area: {area:.2f} sq km")
+                
 
-    for i in range(2, num_circles + 1):
-        centers, areas, indices = find_n_circle_intersection(circles_data, i, s_density=150)
-        print(f"\n--- Approximate Intersections for {i} Circles ---")
-        for j, center in enumerate(centers):
-            involved_labels = [circle_label[idx] for idx in indices[j]]
-            if center:
-                print(f"  Circles: {', '.join(involved_labels)}, Centroid: (Lon: {center[0]:.4f}, Lat: {center[1]:.4f}), Area: {areas[j]:.2f} sq km")
-                if i not in all_intersections_data:
-                    all_intersections_data[i] = []
-                all_intersections_data[i].append({'labels': involved_labels, 'centroid': center, 'area': areas[j]})
-            else:
-                print(f"  Circles: {', '.join(involved_labels)}, No significant intersection found.")
+    #Read the CIDR file
+    with open(cidr_file_path, 'r') as f:
+        lines = f.readlines()
+        cidrs = [line.strip().split('-')[-1].strip()for line in lines if line.strip()]
 
-    #Save the above results as JSON in the same folder
+    #Checking if confirmed IPs are in the CIDRs
+    for ip in confirmed_ips:
+        for cidr in cidrs:
+            if is_ip_in_cidr(ip, cidr):
+                target_ip_cidrs += 1
+                break
 
-    # Visualization (plotting circles and intersection centroids)
-    #if all_intersections_data or circles_data:
-    #    fig, ax = plt.subplots()
-    #
-    #    for circle_info in circles_data:
-    #        center_lat, center_long, radius_km = circle_info
-    #        # Approximate circle for plotting
-    #        circle = Point(center_long, center_lat).buffer(radius_km * 0.01)
-    #        x, y = circle.exterior.xy
-    #        ax.plot(x, y, alpha=0.5, label=f"Circle ({center_lat:.2f}, {center_long:.2f})")
-    #        ax.plot(center_long, center_lat, 'o', color='black', markersize=5)  # Mark circle centers
+    #Writing the data to the output file
+    with open(output_file_path, 'w') as f:
+        ips = [apply_netmask(ip,mask).strip()+'\n' for ip in confirmed_ips]
+        f.writelines(ips)
 
-    #    for n_circles, intersections in all_intersections_data.items():
-    #        for intersection in intersections:
-    #            center = intersection['centroid']
-    #            labels = intersection['labels']
-    #            ax.plot(center[0], center[1], 'x', markersize=8, label=f'{n_circles} Circles ({", ".join(labels)})') # Mark intersection centroids
+    #Writing the meta info
+    with open(meta_info_file_path, 'w') as f:
+        f.write(f"Process: {process_name}\n")
+        f.write(f"Total IPs: {total}\n")
+        f.write(f"Did not reach target: {didnt_reach_target}\n")
+        f.write(f"Single probe no overlap: {single_probe_no_overlap}\n")
+        f.write(f"Single probe overlap: {single_probe_overlap}\n")
+        f.write(f"Multiple probe no overlap: {multiple_probe_no_overlap}\n")
+        f.write(f"Multiple probe overlap: {multiple_probe_overlap}\n")
+        f.write(f"Ambigious count: {ambigious_count}\n")
+        f.write(f"Target IP CIDRs: {target_ip_cidrs}\n")
+        f.write("\n")
 
-    #    ax.set_xlabel("Longitude")
-    #    ax.set_ylabel("Latitude")
-    #    ax.set_title("Circles and Approximate Intersection Centers")
-    #    ax.legend(loc='upper left', bbox_to_anchor=(1, 1))
-    #    ax.set_aspect('equal', adjustable='box')
-    #    plt.grid(True)
-    #    plt.tight_layout()
-    #    plt.savefig("circles_intersections.png", dpi=300)
-    #else:
-    #    print("\nNo data to visualize.")
+    
+    
+    
+    
+    
 
+if __name__ == '__main__':
+    #Load the name of the Folder to look at
+    #create n processes -- start with stamford and littlefield -- to process the tracedata
+    ## Each process will open the respective folder and load all the CIDRs currently being processed
+    ## Each process will duplicate the trace_data json file
+    ## Each process will load the duplicated json trace data
+    ## Each process will go through the IPs
+    ### If the smallest RTT probes is 0, skip
+    ### If the smallest RTT probes is 1 -- find the intersection of that probe's circle and the target circle
+    ### If > 1 smallest RTT -- find the the max intersection, then that intersection's overlap with the target circle
+    ### Make sure that all 3 circles intersect (or all n circles intersect) -- if not remove
+    ## Each process will save this result by saving it to the duplicate trace data json file and write it to a file
+    print("Starting the process...")
+    input_file_name = 'validation_test.txt' #Library File
+    graph_folder_name = 'Graphs' #Graph Folder in results folder
+    outfile_name = 'final_filtered.txt'
+    with open(input_file_name, 'r') as f:
+        lines = f.readlines()
+        lines = ['Results_'+line.strip().split('~')[2].replace(' ','_') for line in lines if line.strip()]
+    
+    if len(lines) <= 14:
+        processes_num = len(lines)
+    else:
+        processes_num = 14
 
+    # Create a pool of processes
+    with multiprocessing.Pool(processes=processes_num) as pool:
+        # Map the function to the lines
+        pool.starmap(process_cbg_data, [(line.strip(), graph_folder_name,outfile_name) for line in lines])
 
-
+    #By here all the data has been processed and the lines have been written to the file
