@@ -67,6 +67,10 @@ def read_traceroute(folder_names, dest_file, probe_data, lat_lon,cidrs):
     for folder in folder_names:
         #Walking through files in the folder
         #Will check if the current file IP is in the CIDR list
+
+        #If the it's not a folder, skip it
+        if not os.path.isdir(folder):
+          continue
         temp = get_all_files_in_folder(folder)
         dup_selection = {}
         print(f'Getting File Names in {folder}')
@@ -101,6 +105,10 @@ def read_traceroute(folder_names, dest_file, probe_data, lat_lon,cidrs):
             with open(file_path, 'r') as f:
                temp = json.load(f)
 
+            if not isinstance(temp, dict):
+                print(f"Warning: Expected dict, got {type(temp)} in file {file}")
+                continue
+
             msm_id = file.split('-')[0].strip()
             ip = file.split('-')[1].strip()
             #Remove later
@@ -118,7 +126,9 @@ def read_traceroute(folder_names, dest_file, probe_data, lat_lon,cidrs):
 
             #Getting the traceroutes and last_hop_ip per prb
             for item in temp[ip]:
-                #The probes update every day so we will have to update this everyday too
+                if not isinstance(item, dict):
+                    print(f"Warning: Expected dict, got {type(item)}: {item}")
+                    continue
                 prb_item = {'Traceroute':[], 'Last_Hop_IP':None, 'Dest_Replied':False, 'Domain_info_close': False,'RTTs':[], 'Second_Last_Hop':None, 'Last_RTT':None, 'Second_Last_RTT':None,'Final_Hop_Differences':{}}
                 prb_item['Dest_Replied'] = item['destination_ip_responded']
                 traceroute_full = item['result']
@@ -341,16 +351,20 @@ def read_traceroute(folder_names, dest_file, probe_data, lat_lon,cidrs):
             #Calculate the rdns of the last hop IPs, then do a hoiho reuqest and map the lat,long to domain to probe
             #If the distance beween the lat,long (this and library) is closer than 40 Km, update the geoloc boolean
             ip_data['Last_Hops_final'] = list(set(ip_data['Last_Hops_final']))
-            domains_dict = perform_lookups(ip_data['Last_Hops_final'])
+            try:
+              domains_dict = perform_lookups(ip_data['Last_Hops_final'])
+            except Exception as e:
+              print(f"Error during reverse DNS lookup: {e}")
+              domains_dict = {}
             
 
             domain_list = []
             for ip in ip_data['Last_Hops_final']:
-                domain = domains_dict[ip]
+                domain = domains_dict.get(ip)
                 if domain is not None:
                     domain_list.append(domain)
                 else:
-                    domain_list.append('*') #Placeholder for no domain found
+                    domain_list.append('*')  # Placeholder for no domain found
             #Not needed after this
             ip_data['Last_Hops_final'] = domains_dict
             #Querying Hoiho
@@ -390,29 +404,19 @@ def read_traceroute(folder_names, dest_file, probe_data, lat_lon,cidrs):
             #Checking if the lat long is within 40 km of the library -- max radius of a city in US
             lib_loc = (float(lat_lon[0]), float(lat_lon[1]))
             for key in ip_data:
-              if type(key) != int:
-                continue
-              prb_item = ip_data[key]
-              try:
-                domain = domains_dict[prb_item['Usable_Last_Hop_IP']]
+                if type(key) != int:
+                    continue
+                prb_item = ip_data[key]
+                domain = domains_dict.get(prb_item['Usable_Last_Hop_IP'])
                 ip_data[key]['Domain'] = domain
-              except KeyError:
-                 print(domains_dict.keys())
-                 print(ip_data['Last_Hops_final'])
-                 print(prb_item['Usable_Last_Hop_IP'])
-                 print(prb_item['Last_Hop_IP'])
-                 print(prb_item['Second_Last_Hop'])
-                 domain = None
-                 raise Exception("KeyError: Domain not found")
-              try:
-                domain_loc = domain_loc_map[domain]
-              except KeyError:
-                continue
-              if domain_loc is not None:
+                if domain is None:
+                    continue
+                domain_loc = domain_loc_map.get(domain)
+                if domain_loc is None:
+                    continue
                 distance = geodesic(lib_loc, domain_loc).kilometers
                 if distance < 40:
-                  ip_data[key]['Domain_info_close'] = True
-               
+                    ip_data[key]['Domain_info_close'] = True
 
             #Get the smallest rtt probes
             smallest_rtt_probes = []
@@ -484,8 +488,8 @@ def merge_probes(probe_path,probe_directory):
      
 
 def main():
-    info_file = 'validation_libraries.txt'
-    directory = './Library_Static_Data/'
+    info_file = 'validation libraries_first_half_left.txt'
+    directory = './Library_Static_Data_og/'
     folders = os.listdir(directory)
     final_folder_file = 'done_show.txt'
     #Compare_name
@@ -509,6 +513,11 @@ def main():
       probe_directory = os.path.join(current_path, 'Past_probes')
       #check if Json path exists
       if not os.path.exists(json_path):
+          name = folder.split('Results_')[1]
+          name = name.replace('?','/')
+          name = name.replace('_',' ')
+          if name in comp_lines:
+             print(f'Skipping {folder} as its not processed yet')
           continue
       folder_names = os.listdir(json_path)
       folder_names = [os.path.join(json_path, folder) for folder in folder_names]

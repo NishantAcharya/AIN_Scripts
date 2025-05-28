@@ -207,6 +207,8 @@ with open('input_nish_2.txt', 'w') as f:
         f.write(line + '\n')
 
 #########################Running a 4th time -- validation IPs
+#Adjust the directory and lib data to include all the libraries you have done so far
+#Then select only the IPs whose CIDRs are not in the above list
 directory = './Library_Static_Data/'
 input_file = './validation_libs_left.txt'
 with open(input_file, 'r') as f:
@@ -216,23 +218,10 @@ with open(input_file, 'r') as f:
 selected_libs  = []
 selected_cidrs = []
 
-with open('Selected_libraries_alex.txt', 'r') as f:
-    lines = f.readlines()
-    selected_libs_alex = [line.strip() for line in lines]
-
-with open('Selected_libraries_nish.txt', 'r') as f:
-    lines = f.readlines()
-    selected_libs_nish = [line.strip() for line in lines]
-
-with open('Selected_libraries_nish_2.txt', 'r') as f:
-    lines = f.readlines()
-    selected_libs_nish_2 = [line.strip() for line in lines]
 
 for i in range(len(val_libs)):
 
     name = val_libs[i]
-    #if name in selected_libs_alex or name in selected_libs_done or name in selected_libs_nish or name in selected_libs_nish_2:
-    #    continue
 
     name = f"Results_{name.strip().replace(' ','_')}"
     print(name)

@@ -20,7 +20,7 @@ while IFS='~' read -r part1 part2 part3 part4 part5; do
     names+=("$part3")
     state+=("$part4")
     libraries+=("$part5")
-done < ./validation_libraries.txt
+done < ./validation_libraries_first_half.txt
 
 #Check if comparision.txt exists, if not, create it
 if [ ! -e ./comparision.txt ]; then
@@ -73,6 +73,7 @@ for i in "${!libraries[@]}"; do
     fi
     # Get provider names for this library
     # Run the FCC providers script and handle JSONDecodeError
+    # Setting to empty for now
     python3 ./FCC_Provider/FCC_providers.py "$library"
     exit_code=$?
 

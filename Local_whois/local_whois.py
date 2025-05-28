@@ -12,20 +12,20 @@ from pathlib import Path
 
 
 #input files
-input_cidr = "./reverse_geolocation/cidrs_near_library.txt"
-csv_file = "./whois_data/cidr_greater_25.csv"
+input_cidr = Path(__file__).resolve().parent / ".." / "reverse_geolocation" / "cidrs_near_library.txt"
+csv_file = Path(__file__).resolve().parent / ".." / "whois_data" / "cidr_greater_25.csv"
 #small_cidr_csv_file = Path(__file__).resolve().parent / "small_cidr.csv"
-dat_file = "./whois_data/cidr.dat"
-keyword_file = "./provider_keywords.txt"
-black_list_file = "./Data_set/blacklist.txt"
-state_file = "./Data_set/states.txt"
-
+dat_file = Path(__file__).resolve().parent / ".." / "whois_data" / "cidr.dat"
+keyword_file = Path(__file__).resolve().parent / ".." / "TF-IDF" / "provider_keywords.txt"
+black_list_file = Path(__file__).resolve().parent / ".." / "Data_set" / "blacklist.txt"
+state_file = Path(__file__).resolve().parent / ".." / "Data_set" / "states.txt"
+white_list_Org = Path(__file__).resolve().parent / ".." / "Data_set" / "orgName.txt"
 #output files
-output_file = "./outputs/final_cidrs.txt"
-all_orgname_file = "./outputs/all_orgname.txt"
-filter_orgname_file = "./outputs/providers_orgname.txt"
-black_org_file = "./outputs/after_blacklist_orgname.txt"
-stat_file = "./outputs/statistic.txt"
+output_file = Path(__file__).resolve().parent / ".." / "outputs" / "final_cidrs.txt"
+all_orgname_file = Path(__file__).resolve().parent / ".." / "outputs" / "all_orgname.txt"
+filter_orgname_file = Path(__file__).resolve().parent / ".." / "outputs" / "providers_orgname.txt"
+black_org_file = Path(__file__).resolve().parent / ".." / "outputs" / "after_blacklist_orgname.txt"
+stat_file = Path(__file__).resolve().parent / ".." / "outputs" / "statistic.txt"
 asndb = pyasn.pyasn(str(dat_file))
 
 test_mode = 1
@@ -143,6 +143,15 @@ with open(black_list_file, "r") as b:
 #for keyword in keyword_set:
     #print(keyword)
 
+#add white list
+whitelist = []
+with open(white_list_Org, "r") as input1:
+    for line in input1:
+        orgN = line.strip()
+        whitelist.append(orgN.lower())
+
+
+
 #for org in Org_set:
     #print(org.get_orgname())
 
@@ -157,10 +166,17 @@ if test_mode == 1:
             file.write(orgn)
             file.write("\n")
         
+white_orgs = [org for org in Org_set if org.get_orgname().lower() in whitelist]
+print("The length of white org is ")
+print(len(white_orgs))
+
 
 filtered_orgs = [org for org in Org_set if any(keyword in org.get_orgname().lower().replace(" ", "") for keyword in keyword_set)]
 black_orgs = [org for org in filtered_orgs if any(keyword in org.get_orgname().lower().replace(" ", "") for keyword in blacklist)]
 flitered_black_orgs = list(set(filtered_orgs) - set(black_orgs))
+flitered_black_orgs = list(set(flitered_black_orgs + white_orgs))
+
+
 
 for org in flitered_black_orgs:
     cidrs = org.get_cidr_set()
@@ -173,6 +189,14 @@ if len(flitered_black_orgs) == 0:
     print("no cidrs found after filtering, return back to orginal cird set.")
     black_orgs = [org for org in Org_set if any(keyword in org.get_orgname().lower().replace(" ", "") for keyword in blacklist)]
     flitered_black_orgs = list(set(Org_set) - set(black_orgs))
+    filtered_cidr = 0
+    filtered_ip = 0
+    for org in flitered_black_orgs:
+        cidrs = org.get_cidr_set()
+        for ci in cidrs:
+            filtered_cidr = filtered_cidr + 1
+            filtered_ip = filtered_ip + get_cidr_num(ci)
+
 with open(output_file, "w") as output:
     for org in flitered_black_orgs:
         cidrs = org.get_cidr_set()
