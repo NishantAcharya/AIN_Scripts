@@ -16,8 +16,8 @@ def apply_netmask(ip, mask):
 
 #Meta information
 mask = 26
-input_file = sys.argv[1]
-output_path = sys.argv[2] #Results_{lib_name}/filtered_ips.txt
+input_file = sys.argv[1] #Results_{lib_name}/filtered_ips.txt
+output_path = sys.argv[2] # dup removed
 output_path = output_path.replace(" ", "\ ")
 cidr_save_path = sys.argv[3] #Results_{lib_name}/filtered_cidrs.txt
 
@@ -25,6 +25,7 @@ with open(input_file, 'r') as f:
     lines = f.readlines()
 
 processed_lines = {}
+test_file = 'test.txt'
 for line in lines:
   ip = line.strip().split('-')[0].strip()
   try:
@@ -35,12 +36,13 @@ for line in lines:
   if int(o_cidr) < 24:
     continue
   cidr_26 = apply_netmask(ip,mask)
+  ########
+  #######
   try:
     temp = processed_lines[cidr_26]
   except KeyError:
     processed_lines[cidr_26] = line
   
-  continue
 
 new_lines = list(processed_lines.values())
 with open(output_path, 'w') as f:

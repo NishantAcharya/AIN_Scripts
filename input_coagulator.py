@@ -210,7 +210,7 @@ with open('input_nish_2.txt', 'w') as f:
 #Adjust the directory and lib data to include all the libraries you have done so far
 #Then select only the IPs whose CIDRs are not in the above list
 directory = './Library_Static_Data/'
-input_file = './validation_libs_left.txt'
+input_file = './validation_input.txt'
 with open(input_file, 'r') as f:
     lines = f.readlines()
     val_libs = [line.strip().split('~')[2].strip() for line in lines]
@@ -224,7 +224,6 @@ for i in range(len(val_libs)):
     name = val_libs[i]
 
     name = f"Results_{name.strip().replace(' ','_')}"
-    print(name)
     selected_libs.append(name)
 
 with open('Selected_libraries_val.txt', 'w') as f:
@@ -250,6 +249,6 @@ for folder in input_folders:
             inpts.extend(lines)
 
 
-with open('input_val_left.txt', 'w') as f:
+with open('input_val_final.txt', 'w') as f:
     for line in tqdm(inpts):
         f.write(line + '\n')

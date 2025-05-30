@@ -76,13 +76,14 @@ maxmind_25 = []
 
 for i in tqdm(range(maxmind['latitude'].size)):
     ######## In database, now I want to see what happens when I look for it
-    test = '108.234.0.0/21'
+    test = '205.209.236.0/23'
     
     try:
         distance = hs.haversine(geoloc,(maxmind['latitude'][i],maxmind['longitude'][i]),unit=Unit.KILOMETERS)
         error_radius = float(maxmind['accuracy_radius'][i])
         if error_radius <= 100:
             distance = distance - error_radius
+
     except:
         continue
     if  distance <= upper_bound_distance:
@@ -107,6 +108,8 @@ with open('./reverse_geolocation/CSV/standard_location.csv') as f:
         except:
             continue
 
+
+        
         if distance <= upper_bound_distance:
             cidrs = ip_range_to_cidr(csv_line[0],csv_line[1])
 

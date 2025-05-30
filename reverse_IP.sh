@@ -20,7 +20,7 @@ while IFS='~' read -r part1 part2 part3 part4 part5; do
     names+=("$part3")
     state+=("$part4")
     libraries+=("$part5")
-done < ./validation_libraries_first_half.txt
+done < ./validation_input.txt
 
 #Check if comparision.txt exists, if not, create it
 if [ ! -e ./comparision.txt ]; then
