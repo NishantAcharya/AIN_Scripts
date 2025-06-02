@@ -37,12 +37,14 @@ for folder in tqdm(val_libs):
 
     #Duplicate the final_cidrs.txt file
     duplicate_file_path = os.path.join(input_directory, folder, 'final_cidrs_duplicate.txt')
-    with open(duplicate_file_path, 'w') as f:
-        for cidr in input_final_cidrs:
-            f.write(cidr + '\n')
+    if not os.path.exists(duplicate_file_path):
+        with open(duplicate_file_path, 'w') as f:
+            for cidr in input_final_cidrs:
+                f.write(cidr + '\n')
 
     #Remove any items in input_final_cidrs that are in og_cidrs 
     input_final_cidrs = [cidr for cidr in input_final_cidrs if cidr not in og_cidrs]
+    total += len(input_final_cidrs)
     print(folder,len(input_final_cidrs), len(og_cidrs))
 
     with open(input_file_path, 'w') as f:

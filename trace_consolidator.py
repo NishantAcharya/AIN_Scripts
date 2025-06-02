@@ -28,7 +28,7 @@ def is_ip_in_cidr(ip, cidr):
 
 def reverse_dns_lookup(ip):
     try:
-        result = socket.gethostbyaddr(ip)
+        result = socket.gethostbyaddr(ip, timeout=120)
         return {ip: result[0]}  # Return the hostname
     except:
         return {ip: None}  # Return None if no hostname is found
@@ -370,13 +370,23 @@ def read_traceroute(folder_names, dest_file, probe_data, lat_lon,cidrs):
             #Querying Hoiho
             data_hoiho = domain_list
             url = 'https://api.hoiho.caida.org/lookups'
-            response = requests.post(url, json=data_hoiho)
-            if response.status_code == 200:
+            try:
+              if len(data_hoiho) == 1 and data_hoiho[0] == '*':
+                response = None
+              elif list(set(data_hoiho)) == ['*']:
+                response = None
+              else:
+                response = requests.post(url, json=data_hoiho, timeout=60)
+            except Exception as e:
+              response = None
+
+            if response!=None and response.status_code == 200:
                 #print("Request was successful.")
                 response_data = response.json()
             else:
                 response_data = None #Make sure you handle this
-                time.sleep(5)
+                if response is not None:
+                  time.sleep(5)
 
             #Parsing the response data
             if response_data is None:
@@ -488,7 +498,7 @@ def merge_probes(probe_path,probe_directory):
      
 
 def main():
-    info_file = 'validation libraries_first_half_left.txt'
+    info_file = 'validation_test.txt'
     directory = './Library_Static_Data_og/'
     folders = os.listdir(directory)
     final_folder_file = 'done_show.txt'

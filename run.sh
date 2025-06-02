@@ -18,7 +18,7 @@ while IFS='~' read -r part1 part2 part3 part4 part5; do
     names+=("$part3")
     state+=("$part4")
     libraries+=("$part5")
-done < ./validation_test.txt
+done < ./validation_input.txt
 # Get the CDIRs from all the folders
 for i in "${!libraries[@]}"; do
     library="${libraries[$i]}"

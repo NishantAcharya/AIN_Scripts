@@ -5,7 +5,7 @@ new_requirements = 0
 
 done_directory = './Library_Static_Data_og/'
 new_directory = './Library_Static_Data/'
-input_file = 'validation_libraries_first_half.txt'
+input_file = 'validation_input.txt'
 inputs = []
 with open(input_file, 'r') as f:
     inputs = ['Results_'+line.strip().split('~')[2].replace(' ','_') for line in f.readlines()]
@@ -16,8 +16,8 @@ for folder in os.listdir(done_directory):
     if not os.path.isdir(os.path.join(done_directory, folder)):
         continue
     
-    done_path = os.path.join(done_directory, folder, 'filtered_ips.txt')
-    new_path = os.path.join(new_directory, folder, 'filtered_ips.txt')
+    done_path = os.path.join(done_directory, folder, 'filtered_dup_removed.txt')
+    new_path = os.path.join(new_directory, folder, 'filtered_dup_removed.txt')
 
     done_check = True
     new_check = True
