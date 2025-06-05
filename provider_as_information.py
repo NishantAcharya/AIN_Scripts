@@ -8,8 +8,8 @@ import multiprocessing
 from collections import defaultdict
 import radix
 
-directory = './Library_Static_Data_og/'
-input_file = 'validation_libraries.txt'
+directory = './Library_Static_Data/'
+input_file = 'validation_input.txt'
 prefix_2_as_file = './Data_set/Prefix_AS.pfx2as'
 
 def load_prefix_to_as_mapping_optimized(file_path):
@@ -46,13 +46,20 @@ def get_asn_from_cidr_optimized(cidr, rtree):
     return None
 
 def process_cidrs_batch(cidrs, rtree):
-    """Process a batch of CIDRs to find their ASNs"""
+    """Process a batch of CIDRs to find their ASNs and return mapping"""
     asn_set = set()
+    cidr_asn_mapping = {}
+    
     for cidr in cidrs:
         asn = get_asn_from_cidr_optimized(cidr, rtree)
+        cidr_ip = cidr.split('/')[0]  # Get the base IP address without prefix
         if asn:
             asn_set.add(asn)
-    return asn_set
+            cidr_asn_mapping[cidr_ip] = asn
+        else:
+            cidr_asn_mapping[cidr_ip] = None
+    
+    return asn_set, cidr_asn_mapping
 
 def process_folder_optimized(args):
     folder, rtree = args
@@ -78,7 +85,7 @@ def process_folder_optimized(args):
     
     for i in tqdm(range(0, len(cidrs), batch_size), desc=f"Processing {folder}"):
         batch = cidrs[i:i + batch_size]
-        batch_asns = process_cidrs_batch(batch, rtree)
+        batch_asns,btach_cidrs = process_cidrs_batch(batch, rtree)
         all_asns.update(batch_asns)
     
     asn_list = list(all_asns)

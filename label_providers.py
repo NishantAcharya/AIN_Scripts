@@ -22,6 +22,12 @@ def query_org(IP):
     if len(fields) < 3:
         print(f"Warning: Not enough fields for IP {IP} - (fields: {len(fields)}) (line: '{csv_line}')")
         return None, None, None
+    if '"' in fields[2]:
+        fields[2] = fields[2] + fields[3]  # Handle case where organization name is split across two field
+        if '"' in fields[2]:
+            fields[2] = fields[2].replace('"', '')
+        fields[2] = fields[2].replace('.', '')  # Replace dot with space in organization name
+
     return fields[0], fields[1], fields[2]
 
 def preprocess_cidrs(lines):
@@ -112,20 +118,17 @@ for folder in folders:
     #print(providers)
 
     # Saving provider set to a file
-    #with open(os.path.join(folder_path, 'provider_set.txt'), 'w') as f:
-    #    full_provider_set = list(set(full_provider_set))
-    #    for provider in full_provider_set:
-    #        f.write(provider + '\n')
+    with open(os.path.join(folder_path, 'provider_set.txt'), 'w') as f:
+        print(f'Writing provider set to {os.path.join(folder_path, "provider_set.txt")}')
+        full_provider_set = list(set(providers))
+        for provider in full_provider_set:
+            f.write(provider + '\n')
 
-    # Write the providers to a file
-    #with open(os.path.join(folder_path, 'provider_ips.txt'), 'w') as f:
-    #    for provider in provider_set:
-    #        f.write(provider + '\n')
+    with open(os.path.join(folder_path, 'org_cache.json'), 'w') as f:
+        json.dump(org_cache, f, indent=4)
 
     # Print the total number of providers found
-    print(f'Total number of providers found for {folder}: {len(provider_set)}')
-
-
+    print(f'Total number of providers found for {folder}: {len(providers)}')
 
 
 
