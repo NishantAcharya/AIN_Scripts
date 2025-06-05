@@ -17,6 +17,11 @@ import multiprocessing
 import ast
 from geopy.distance import geodesic
 import time
+from concurrent.futures import ThreadPoolExecutor
+import threading
+import pickle
+import hashlib
+import re
 
 def is_ip_in_cidr(ip, cidr):
   try:
@@ -26,17 +31,143 @@ def is_ip_in_cidr(ip, cidr):
   except ValueError:
     return False
 
-def reverse_dns_lookup(ip):
+# Persistent DNS cache to avoid repeated lookups across runs
+_dns_cache = {}
+_cache_lock = threading.Lock()
+_cache_file = 'dns_cache.pkl'
+
+def load_dns_cache():
+    """Load DNS cache from disk"""
+    global _dns_cache
     try:
-        result = socket.gethostbyaddr(ip, timeout=120)
-        return {ip: result[0]}  # Return the hostname
-    except:
-        return {ip: None}  # Return None if no hostname is found
+        with open(_cache_file, 'rb') as f:
+            _dns_cache = pickle.load(f)
+        print(f"Loaded {len(_dns_cache)} DNS entries from cache")
+    except (FileNotFoundError, pickle.PickleError):
+        _dns_cache = {}
+        print("Starting with empty DNS cache")
+
+def save_dns_cache():
+    """Save DNS cache to disk"""
+    try:
+        with open(_cache_file, 'wb') as f:
+            pickle.dump(_dns_cache, f)
+        print(f"Saved {len(_dns_cache)} DNS entries to cache")
+    except Exception as e:
+        print(f"Warning: Could not save DNS cache: {e}")
+
+def is_private_or_invalid_ip(ip):
+    """Quick check for private/invalid IPs to skip DNS lookup"""
+    try:
+        ip_obj = ipaddress.ip_address(ip)
+        return ip_obj.is_private or ip_obj.is_reserved or ip_obj.is_multicast
+    except ValueError:
+        return True
+
+def reverse_dns_lookup_single(ip, timeout=1.5):
+    """Single IP reverse DNS lookup with caching and ultra-short timeout"""
+    # Skip private/invalid IPs
+    if is_private_or_invalid_ip(ip):
+        return {ip: None}
     
-def perform_lookups(ip_list):
-    with multiprocessing.Pool() as pool:
-        results = pool.map(reverse_dns_lookup, ip_list)
-    return dict(item for result in results for item in result.items())
+    # Check cache first
+    with _cache_lock:
+        if ip in _dns_cache:
+            return {ip: _dns_cache[ip]}
+    
+    try:
+        # Set socket timeout for DNS lookup
+        old_timeout = socket.getdefaulttimeout()
+        socket.setdefaulttimeout(timeout)
+        
+        result = socket.gethostbyaddr(ip)
+        hostname = result[0]
+        
+        # Cache the result
+        with _cache_lock:
+            _dns_cache[ip] = hostname
+            
+        return {ip: hostname}
+    except:
+        # Cache negative results too
+        with _cache_lock:
+            _dns_cache[ip] = None
+        return {ip: None}
+    finally:
+        # Restore original timeout
+        socket.setdefaulttimeout(old_timeout)
+
+def perform_lookups(ip_list, max_workers=1000, timeout=2, batch_delay=0.005):
+    """
+    Ultra-optimized reverse DNS lookup with multiple strategies to avoid blocking:
+    - Persistent caching across runs
+    - Skip private/invalid IPs
+    - Reduced timeout (1.5s)
+    - Small batch sizes (15) with micro-delays
+    - Rate limiting to be DNS-friendly
+    - Progress tracking
+    """
+    if not ip_list:
+        return {}
+    
+    # Remove duplicates and filter out private IPs
+    unique_ips = []
+    seen = set()
+    for ip in ip_list:
+        if ip not in seen and not is_private_or_invalid_ip(ip):
+            unique_ips.append(ip)
+            seen.add(ip)
+    
+    # Check cache first for all IPs
+    results = {}
+    uncached_ips = []
+    
+    with _cache_lock:
+        for ip in unique_ips:
+            if ip in _dns_cache:
+                results[ip] = _dns_cache[ip]
+            else:
+                uncached_ips.append(ip)
+    
+    #print(f"DNS: {len(results)} cached, {len(uncached_ips)} new lookups from {len(ip_list)} total IPs")
+    
+    if not uncached_ips:
+        return results
+    
+    # Process uncached IPs in small batches to be DNS-friendly
+    #batch_size = min(max_workers, 20)  # Even smaller batches
+    batch_size = max_workers
+    
+    #with tqdm(total=len(uncached_ips), desc="DNS Lookups", unit="IPs") as pbar:
+    for i in range(0, len(uncached_ips), batch_size):
+        batch = uncached_ips[i:i + batch_size]
+        
+        with ThreadPoolExecutor(max_workers=len(batch)) as executor:
+            # Submit batch tasks
+            future_to_ip = {
+                executor.submit(reverse_dns_lookup_single, ip, timeout): ip 
+                for ip in batch
+            }
+            
+            # Collect results as they complete
+            for future in future_to_ip:
+                try:
+                    result = future.result(timeout=timeout + 0.5)
+                    results.update(result)
+                except Exception as e:
+                    ip = future_to_ip[future]
+                    results[ip] = None
+                    # Cache negative result
+                    with _cache_lock:
+                        _dns_cache[ip] = None
+                
+                #pbar.update(1)
+        
+        # Micro-delay between batches to be DNS-friendly
+        if i + batch_size < len(uncached_ips):
+                time.sleep(batch_delay)
+    
+    return results
 
 
 def get_all_files_in_folder(folder_path):
@@ -244,6 +375,9 @@ def read_traceroute(folder_names, dest_file, probe_data, lat_lon,cidrs,lib_name)
                 prb_item['Final_Hop_Differences'][d_key].append(difference)
 
                 id = item['prb_id']
+                if str(id) not in probe_data:
+                    #print(f"Warning: Probe ID {id} not found in probe_data. Skipping.")
+                    continue
                 probe_lat_lon = tuple(probe_data[str(id)][1])
                 prb_item['Lat,Long'] = probe_lat_lon
                 # Calculate the distance between the probe and the destination
@@ -390,20 +524,27 @@ def read_traceroute(folder_names, dest_file, probe_data, lat_lon,cidrs,lib_name)
               if domain is None:
                   continue
               
+              domain = domain.lower()
               for iata in iata_codes:
-                  if iata in domain:
-                      ip_data[key]['Domain_info_close'] = True
-                      break
+                chunks = domain.split('.')
+                pattern = re.compile(r'\d*' + re.escape(iata.lower()) + r'\d*')
+                if any(pattern.fullmatch(chunk) for chunk in chunks):
+                  #print(f"Found IATA code {iata} in domain {domain} for probe {key}")
+                  ip_data[key]['Domain_info_close'] = True
+                  break
               
+              #These not following the above pattern due to haveing more info
               if not ip_data[key].get('Domain_info_close', False):
                   for abbvr in city_abbvrs:
-                      if abbvr in domain:
+                      if abbvr.lower() in domain:
+                          #print(f"Found city abbreviation {abbvr} in domain {domain} for probe {key}")
                           ip_data[key]['Domain_info_close'] = True
                           break
                       
               if not ip_data[key].get('Domain_info_close', False):
                   for abbvr in lib_abbvrs:
-                      if abbvr in domain:
+                      if abbvr.lower() in domain:
+                          #print(f"Found library abbreviation {abbvr} in domain {domain} for probe {key}")
                           ip_data[key]['Domain_info_close'] = True
                           break
                 
@@ -479,8 +620,11 @@ def merge_probes(probe_path,probe_directory):
      
 
 def main():
-    info_file = 'validation_test.txt'
-    directory = './Library_Static_Data_og/'
+    # Load DNS cache at startup
+    load_dns_cache()
+    
+    info_file = 'validation_input.txt'
+    directory = './Library_Static_Data/'
     folders = os.listdir(directory)
     final_folder_file = 'done_show.txt'
     #Compare_name
@@ -489,75 +633,79 @@ def main():
         lines = [line.strip() for line in lines]
         comp_lines = [line.split('~')[2] for line in lines]
 
-    for folder in folders:
-      
-      current_path = os.path.join(directory, folder)
-      json_path = os.path.join(current_path, 'JSON')
-      
-      #If need be to full restart comment his linen out
-      #final_check = os.path.join(current_path,final_folder_file)
-      #if os.path.exists(final_check):
-      #    print(f'Final check file {final_check} exists, skipping {folder}')
-      #    continue
-      
-      probe_path = os.path.join(current_path, 'grouped_probes.json')
-      probe_directory = os.path.join(current_path, 'Past_probes')
-      #check if Json path exists
-      if not os.path.exists(json_path):
+    try:
+        for folder in folders:
+          
+          current_path = os.path.join(directory, folder)
+          json_path = os.path.join(current_path, 'JSON')
+          
+          #If need be to full restart comment his linen out
+          #final_check = os.path.join(current_path,final_folder_file)
+          #if os.path.exists(final_check):
+          #    print(f'Final check file {final_check} exists, skipping {folder}')
+          #    continue
+          
+          probe_path = os.path.join(current_path, 'grouped_probes.json')
+          probe_directory = os.path.join(current_path, 'Past_probes')
+          #check if Json path exists
+          if not os.path.exists(json_path):
+              name = folder.split('Results_')[1]
+              name = name.replace('?','/')
+              name = name.replace('_',' ')
+              if name in comp_lines:
+                 print(f'Skipping {folder} as its not processed yet')
+              continue
+          folder_names = os.listdir(json_path)
+          folder_names = [os.path.join(json_path, folder) for folder in folder_names]
+          dest_file = os.path.join(current_path, 'meta.txt')
+          
           name = folder.split('Results_')[1]
           name = name.replace('?','/')
           name = name.replace('_',' ')
-          if name in comp_lines:
-             print(f'Skipping {folder} as its not processed yet')
-          continue
-      folder_names = os.listdir(json_path)
-      folder_names = [os.path.join(json_path, folder) for folder in folder_names]
-      dest_file = os.path.join(current_path, 'meta.txt')
-      
-      name = folder.split('Results_')[1]
-      name = name.replace('?','/')
-      name = name.replace('_',' ')
-      if name not in comp_lines:
-        continue
+          if name not in comp_lines:
+            continue
 
-      final_info_path = os.path.join(current_path, 'filtered_dup_removed.txt')
-      with open(final_info_path, 'r') as f:
-        lines = f.readlines()
-        lines = [line.strip().split('-')[1] for line in lines]
-        cidr_lines = lines
-      print(f'Processing {folder}...')
-      #Looking for the lat long values in info_file
-      with open(info_file, 'r') as f:
-          lines = f.readlines()
-          for line in lines:
-              if name in line:
-                  print(line)
-                  lat = float(line.split('~')[0].strip())
-                  lon = float(line.split('~')[1].strip())
-                  break
-      print(f'Lat: {lat}, Lon: {lon}')
-      #Load the JSON for all the probes and merge them together and then pass them to the function
-      probe_data = merge_probes(probe_path, probe_directory)
-      data = read_traceroute(folder_names, dest_file, probe_data, (lat,lon),cidr_lines,name)
-      dest_folder = os.path.join(current_path, 'Trace_data.json')
-      #Check if the folder exists
-      with open(dest_folder, 'w') as f:
-          json.dump(data, f, indent=4)
+          final_info_path = os.path.join(current_path, 'filtered_dup_removed.txt')
+          with open(final_info_path, 'r') as f:
+            lines = f.readlines()
+            lines = [line.strip().split('-')[1] for line in lines]
+            cidr_lines = lines
+          print(f'Processing {folder}...')
+          #Looking for the lat long values in info_file
+          with open(info_file, 'r') as f:
+              lines = f.readlines()
+              for line in lines:
+                  if name in line:
+                      print(line)
+                      lat = float(line.split('~')[0].strip())
+                      lon = float(line.split('~')[1].strip())
+                      break
+          print(f'Lat: {lat}, Lon: {lon}')
+          #Load the JSON for all the probes and merge them together and then pass them to the function
+          probe_data = merge_probes(probe_path, probe_directory)
+          data = read_traceroute(folder_names, dest_file, probe_data, (lat,lon),cidr_lines,name)
+          dest_folder = os.path.join(current_path, 'Trace_data.json')
+          #Check if the folder exists
+          with open(dest_folder, 'w') as f:
+              json.dump(data, f, indent=4)
 
-      final_dest_file = os.path.join(current_path, final_folder_file)
-      #Writing the final file
-      with open(final_dest_file, 'a') as f:
-          f.write(f'{folder} - {dest_folder}\n')
+          final_dest_file = os.path.join(current_path, final_folder_file)
+          #Writing the final file
+          with open(final_dest_file, 'a') as f:
+              f.write(f'{folder} - {dest_folder}\n')
 
-      #Checking last mile latencies --- THE IDEA
-      #Store the second last and last hop IPs as pairs for only the traces whose destination replied (otherwise we can't really say anything for access net)
-      #The dicrionary will store the difference between those two pairs for that library group
-      #Question? --> What if we just foudn them on bad day? -- high RTT difference? -- can't do much that's an issue
-      #If the last mile latency, if there is a lower difference, use that
-      #If there is only one difference, then we need a threshold -- (avg RTT based on distance 14.75+0.015*dist) with a RMSE of 12ms(cite)
-      #Based on this it should not be going further than the neasrest high pop density region
-      ## Use burlington's example to say that the last mile latency may be going though the nearest metro region
-      ## Assumtion is that the last hop differnce should not be higher than the average RTT between the probe and the destination
+          #Checking last mile latencies --- THE IDEA
+          #Store the second last and last hop IPs as pairs for only the traces whose destination replied (otherwise we can't really say anything for access net)
+          #The dicrionary will store the difference between those two pairs for that library group
+          #Question? --> What if we just foudn them on bad day? -- high RTT difference? -- can't do much that's an issue
+          #If the last mile latency, if there is a lower difference, use that
+          #If there is only one difference, then we need a threshold -- (avg RTT based on distance 14.75+0.015*dist) with a RMSE of 12ms(cite)
+          #Based on this it should not be going further than the neasrest high pop density region
+          ## Use burlington's example to say that the last mile latency may be going though the nearest metro region
+          ## Assumtion is that the last hop differnce should not be higher than the average RTT between the probe and the destination
+    
+    finally:
+        # Save DNS cache on exit
+        save_dns_cache()
 
 main()
-

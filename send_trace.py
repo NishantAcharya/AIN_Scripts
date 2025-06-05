@@ -148,9 +148,9 @@ def create_trace_bulk(probe_ids,ips,key):
 
     traces_inpt.append(trace)
     traces.append(0)
-
+#Updating to 12 minutes
   st = datetime.now(timezone.utc)+timedelta(minutes=1)
-  et = datetime.now(timezone.utc)+timedelta(minutes=11)
+  et = datetime.now(timezone.utc)+timedelta(minutes=13)
   atlas_request = AtlasCreateRequest(
       start_time=st,
       stop_time=et,
@@ -284,7 +284,7 @@ def main(max_buffer_size, producer_file, consumer_file, inpt_file,secure_key):
           #Bulk traceroute
           msms = []
           CHUNK_SIZE = 1
-          SLEEP_TIME = 1.8 #8.6 #7 measurements per minute
+          SLEEP_TIME = 1.7 #8.6 #7 measurements per minute
           #Change this to 1.7 for Alex's API
           #Dividing into smaller chunks
           for i in range(0, len(ad_ips), CHUNK_SIZE):

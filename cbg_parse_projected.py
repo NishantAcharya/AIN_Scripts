@@ -223,7 +223,7 @@ def is_ip_in_cidr(ip, cidr):
 def process_cbg_data(trace_folder_name,graph_folder_name,outfile_name):
     process_name = multiprocessing.current_process().name
     mask = 26
-    directory = './Library_Static_Data_og/'
+    directory = './Library_Static_Data/'
     print(f"Process {process_name} is processing data for folder: {trace_folder_name}")
     #CIDR file path
     cidr_file_path = f"{directory}{trace_folder_name}/filtered_dup_removed.txt"
@@ -453,7 +453,7 @@ if __name__ == '__main__':
     ### Make sure that all 3 circles intersect (or all n circles intersect) -- if not remove
     ## Each process will save this result by saving it to the duplicate trace data json file and write it to a file
     print("Starting the process...")
-    input_file_name = 'validation_test.txt' #Library File
+    input_file_name = 'validation_input.txt' #Library File
     graph_folder_name = 'Graphs' #Graph Folder in results folder
     outfile_name = 'final_filtered.txt'
     with open(input_file_name, 'r') as f:

@@ -136,11 +136,12 @@ def main(data):
         error_file.write(f"Error: Directory has a seprator - '{data}'.\n")
     print(f"Process {process_name} is processing data: {msm}")
     result = retreive_msm(msm)
-    print(result)
     save_to_file_ping(result,msm,ip,cidr,directory)
+    print(f"directory: {directory}")
     print(f'-----------------------------------{msm}-----------------------------------')
 
 if __name__ == '__main__':
+    print("Starting the download trace script...")
     consumer_file = sys.argv[1]
     download_file = sys.argv[2]
     input_file = sys.argv[3]
@@ -181,27 +182,29 @@ if __name__ == '__main__':
       
       for item in data:
         with open(download_file, 'a') as file:
+          print(f"Writing {item} to {download_file}")
           file.write(item + '\n')
         dwnlds += 1
       
       #Save the read lines to the download file -- because multiple writers can cause issues
 
+    print(f"All downloads are done")
 
-    today_date = date.today().strftime("%Y-%m-%d")
-    past_meta_dir = "./past_meta_files/"
-    os.makedirs(past_meta_dir, exist_ok=True)
+    # today_date = date.today().strftime("%Y-%m-%d")
+    # past_meta_dir = "./past_meta_files/"
+    # os.makedirs(past_meta_dir, exist_ok=True)
 
-    # Define new file paths with today's date
-    new_download_file = os.path.join(past_meta_dir, f"{download_file}_{today_date}.txt")
-    new_producer_file = os.path.join(past_meta_dir, f"{producer_file}_{today_date}.txt")
-    new_consumer_file = os.path.join(past_meta_dir, f"{consumer_file}_{today_date}.txt")
+    # # Define new file paths with today's date
+    # new_download_file = os.path.join(past_meta_dir, f"{download_file}_{today_date}.txt")
+    # new_producer_file = os.path.join(past_meta_dir, f"{producer_file}_{today_date}.txt")
+    # new_consumer_file = os.path.join(past_meta_dir, f"{consumer_file}_{today_date}.txt")
 
-    # Move the files
-    os.rename(download_file, new_download_file)
-    os.rename(producer_file, new_producer_file)
-    os.rename(consumer_file, new_consumer_file)
+    # # Move the files
+    # os.rename(download_file, new_download_file)
+    # os.rename(producer_file, new_producer_file)
+    # os.rename(consumer_file, new_consumer_file)
 
-    print(f"Files moved to '{past_meta_dir}' with today's date.")
+    # print(f"Files moved to '{past_meta_dir}' with today's date.")
 
 
 
