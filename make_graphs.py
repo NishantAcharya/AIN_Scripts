@@ -70,8 +70,8 @@ def log_cdf_multi(value_lists, labels=None, title="Log CDF Comparison", log_base
     plt.show()
 #########
 
-directory = './Library_Static_Data_og/'
-input_file = 'validation_libraries.txt'
+directory = './Library_Static_Data/'
+input_file = 'validation_input.txt'
 folders = []
 with open(input_file, 'r') as f:
     lines = f.readlines()
